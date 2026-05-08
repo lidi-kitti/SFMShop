@@ -22,7 +22,7 @@ class Product:
             return False
         return self.name == other.name and self.price == other.price
 
-
+#Функция для обновления цены
     def set_price(self, price):
         if price<0:
             raise ValidationError("Цена не может быть отрицательной")
