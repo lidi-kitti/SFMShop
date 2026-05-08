@@ -27,3 +27,6 @@ class Product:
         if price<0:
             raise ValidationError("Цена не может быть отрицательной")
         self.price = price
+
+    def apply_discount(self, price):
+        pass
