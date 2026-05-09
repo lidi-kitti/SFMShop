@@ -30,3 +30,9 @@ class Product:
 
     def apply_discount(self, price):
         pass
+
+    def check_stock(self):
+        pass
+
+    def update_stock(self):
+        pass
