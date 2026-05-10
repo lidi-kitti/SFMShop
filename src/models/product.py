@@ -40,5 +40,7 @@ class Product:
     def get_total_price(self):
         #другой комментарий
         pass
+    def calculate_shipping(self):
+        pass
     def get_category(self):
         pass
