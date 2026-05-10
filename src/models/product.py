@@ -42,3 +42,5 @@ class Product:
         pass
     def calculate_shipping(self):
         pass
+    def get_category(self):
+        pass
