@@ -30,3 +30,7 @@ class Product:
 
     def apply_discount(self, price):
         pass
+
+    def get_total_price(self):
+        #другой комментарий
+        pass
