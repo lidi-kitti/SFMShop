@@ -38,4 +38,5 @@ class Product:
         pass
 
     def get_total_price(self):
+        #другой комментарий
         pass
