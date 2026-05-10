@@ -1,0 +1,213 @@
+$ git log --stat
+commit b97b8e6708f382ad8d8a946f4828a5c52f44dd90 (HEAD -> feature/add-shipping, origin/feature/add-shipping)
+Merge: 6656368 fdcfaab
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sun May 10 16:52:57 2026 +0300
+
+    Объединены изменения из main
+
+commit fdcfaab7962b0fb507386ff0c690c4234558a503 (main)
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sun May 10 16:52:11 2026 +0300
+
+    Добавлен метод get_category в Product
+
+ src/models/product.py | 2 ++
+ 1 file changed, 2 insertions(+)
+
+commit 6656368c297bcd48388abe934f71d1d811f392e8
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sun May 10 16:50:58 2026 +0300
+:...skipping...
+commit b97b8e6708f382ad8d8a946f4828a5c52f44dd90 (HEAD -> feature/add-shipping, origin/feature/add-shipping)
+Merge: 6656368 fdcfaab
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sun May 10 16:52:57 2026 +0300
+
+    Объединены изменения из main
+
+commit fdcfaab7962b0fb507386ff0c690c4234558a503 (main)
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sun May 10 16:52:11 2026 +0300
+
+    Добавлен метод get_category в Product
+
+ src/models/product.py | 2 ++
+ 1 file changed, 2 insertions(+)
+
+commit 6656368c297bcd48388abe934f71d1d811f392e8
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sun May 10 16:50:58 2026 +0300
+
+    Добавлен метод calculate_shipping в Product"
+
+ src/models/product.py | 2 ++
+ 1 file changed, 2 insertions(+)
+
+commit d405e32d6c939e65b690050a6ac095f822e5f7b0 (feature/test-rebase)
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sun May 10 16:48:09 2026 +0300
+
+    Добавлен другой комментарий
+
+ src/models/product.py | 1 +
+ 1 file changed, 1 insertion(+)
+
+commit dc93284f94e1a9f6c17c06937afb047784d86b2e (origin/main)
+Merge: 41dc851 9924929
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sun May 10 16:45:29 2026 +0300
+
+    Merge remote-tracking branch 'origin/main'
+
+commit 41dc851fe621012d5749a8138c9afe7f8bb188f2
+Merge: 1ccd589 05c2a50
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sun May 10 16:45:12 2026 +0300
+
+    Разрешен конфликт в get_total_price и добавлен комменатарий в user
+
+commit 1ccd5898f5e441e9506d6f177cf4059a41f2a734
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sun May 10 16:43:38 2026 +0300
+
+    Изменен метод get_total_price в main
+
+ src/models/product.py | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+commit 05c2a5048c1c125010badf2cd37be38b85b14884 (feature/test-conflict)
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sun May 10 16:42:43 2026 +0300
+
+    Изменен метод get_total_price в feature/test-conflict
+
+ src/models/product.py | 3 +++
+ 1 file changed, 3 insertions(+)
+
+commit c7d3e613affd65a5c3645161dc1aae58e2735069 (origin/feature/add-inventory-management, feature/add-inventory-management)
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sat May 9 21:38:44 2026 +0300
+
+    Добавлены методы управления складом в класс Product
+
+ src/models/product.py | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+commit 99249299a445fd03867d7a9fd6fa0aa39ba38cb5
+Merge: 299c4d8 a51cc8f
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sat May 9 21:36:55 2026 +0300
+
+    Merge pull request #1 from lidi-kitti/feature/add-email-validation
+
+    Добавлена валидация email в класс User
+
+commit a51cc8f0cbdeff0ae0d83399bcc3ccccd4afaed3 (origin/feature/add-email-validation, feature/add-email-validation)
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sat May 9 21:35:05 2026 +0300
+
+    Добавлена валидация email в класс User
+
+ src/models/user.py | 1 +
+ 1 file changed, 1 insertion(+)
+
+commit 299c4d86f7a19db2be4991bc4d312ee1c88c6e02
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Fri May 8 21:43:03 2026 +0300
+
+    Добавлена система скидок в класс Product
+
+ src/models/product.py | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+commit 2cb3277e954bb3e5e975f907ff18acf67cbc01d0 (feature/test-stash)
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Fri May 8 21:41:07 2026 +0300
+
+    Добавлены уроки блока 2: ООП
+
+ src/main.py | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+commit d55f50412de002cc25823dbd1c527b94fafdd72a
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Fri May 8 21:40:47 2026 +0300
+
+    Добавлены уроки блока 1: основы Python
+
+ src/main.py | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+commit cbbeb67af8b501dcc2716b8ef86774b74b8061eb
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Fri May 8 21:38:02 2026 +0300
+
+    Add comment for function
+
+ src/models/product.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit a466a11efe8dc858c5ada18936daacb682b11208 (feature/test)
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Fri May 8 21:33:37 2026 +0300
+
+    Change .gitignore
+
+ .gitignore | 27 +++++++++++++++++++++++++--
+ 1 file changed, 25 insertions(+), 2 deletions(-)
+
+commit 850f4022e87f67f55bf4dd5a135a48e75ef7edb2 (master)
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Fri May 8 21:31:51 2026 +0300
+
+    Add .gitignore
+
+ .gitignore | 3 +++
+ 1 file changed, 3 insertions(+)
+
+commit cd1680deea5d1d552d8931282ef867919449ec8d
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Fri May 8 21:27:29 2026 +0300
+
+    Инициализация проекта SFMShop
+
+ README.md                                          |   6 +
+ requirements.txt                                   |   0
+ src/__init__.py                                    |   0
+ src/__pycache__/__init__.cpython-312.pyc           | Bin 0 -> 134 bytes
+ src/__pycache__/__init__.cpython-314.pyc           | Bin 0 -> 136 bytes
+ src/__pycache__/main.cpython-312.pyc               | Bin 0 -> 3160 bytes
+ src/__pycache__/main.cpython-314.pyc               | Bin 0 -> 4462 bytes
+ src/data/orders.txt                                |   5 +
+ src/data/processed_orders.txt                      |   2 +
+ src/data/processed_orders_report.txt               |   4 +
+ src/data/products.txt                              |   3 +
+ src/data/products_with_prices.txt                  |   3 +
+ src/main.py                                        | 909 +++++++++++++++++++++
+ src/models/__inti__.py                             |   0
+ src/models/__pycache__/exceptions.cpython-312.pyc  | Bin 0 -> 1580 bytes
+ src/models/__pycache__/exceptions.cpython-314.pyc  | Bin 0 -> 868 bytes
+ src/models/__pycache__/order.cpython-312.pyc       | Bin 0 -> 2046 bytes
+ src/models/__pycache__/order.cpython-314.pyc       | Bin 0 -> 1465 bytes
+ src/models/__pycache__/payment.cpython-312.pyc     | Bin 0 -> 2054 bytes
+ src/models/__pycache__/payment.cpython-314.pyc     | Bin 0 -> 2256 bytes
+ src/models/__pycache__/product.cpython-312.pyc     | Bin 0 -> 2728 bytes
+ src/models/__pycache__/product.cpython-314.pyc     | Bin 0 -> 2170 bytes
+ src/models/__pycache__/user.cpython-312.pyc        | Bin 0 -> 1486 bytes
+ src/models/__pycache__/user.cpython-314.pyc        | Bin 0 -> 898 bytes
+ src/models/exceptions.py                           |  12 +
+ src/models/order.py                                |  16 +
+ src/models/payment.py                              |  23 +
+ src/models/product.py                              |  29 +
+ src/models/user.py                                 |  12 +
+ src/utils/__init__.py                              |   0
+ src/utils/__pycache__/__init__.cpython-312.pyc     | Bin 0 -> 140 bytes
+ src/utils/__pycache__/__init__.cpython-314.pyc     | Bin 0 -> 142 bytes
+ src/utils/__pycache__/calculations.cpython-312.pyc | Bin 0 -> 632 bytes
+ .../__pycache__/order_processor.cpython-314.pyc    | Bin 0 -> 2589 bytes
+ src/utils/__pycache__/validators.cpython-312.pyc   | Bin 0 -> 434 bytes
+ src/utils/calculations.py                          |   9 +
+ src/utils/order_processor.py                       |  27 +
+ src/utils/validators.py                            |  11 +
+ 38 files changed, 1071 insertions(+)
