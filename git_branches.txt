@@ -1,0 +1,14 @@
+$ git branch -a
+  feature/add-email-validation
+  feature/add-inventory-management
+* feature/add-shipping
+  feature/test
+  feature/test-conflict
+  feature/test-rebase
+  feature/test-stash
+  main
+  master
+  remotes/origin/feature/add-email-validation
+  remotes/origin/feature/add-inventory-management
+  remotes/origin/feature/add-shipping
+  remotes/origin/main
