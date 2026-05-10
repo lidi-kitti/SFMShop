@@ -1,0 +1,46 @@
+$ git log --oneline feature/add-logging
+21652c0 (origin/feature/add-logging, feature/add-logging) Добавлены логи кэширования и логирования
+9064a26 Добавлена система логирования
+b97b8e6 (origin/feature/add-shipping, feature/add-shipping) Объединены изменения из main
+fdcfaab Добавлен метод get_category в Product
+6656368 Добавлен метод calculate_shipping в Product"
+d405e32 (feature/test-rebase) Добавлен другой комментарий
+dc93284 Merge remote-tracking branch 'origin/main'
+41dc851 Разрешен конфликт в get_total_price и добавлен комменатарий в user
+1ccd589 Изменен метод get_total_price в main
+05c2a50 (feature/test-conflict) Изменен метод get_total_price в feature/test-conflict
+c7d3e61 (origin/feature/add-inventory-management, feature/add-inventory-management) Добавлены методы управления складом в класс Product
+9924929 Merge pull request #1 from lidi-kitti/feature/add-email-validation
+a51cc8f (origin/feature/add-email-validation, feature/add-email-validation) Добавлена валидация email в класс User
+299c4d8 Добавлена система скидок в класс Product
+2cb3277 (feature/test-stash) Добавлены уроки блока 2: ООП
+d55f504 Добавлены уроки блока 1: основы Python
+cbbeb67 Add comment for function
+a466a11 (feature/test) Change .gitignore
+850f402 (master) Add .gitignore
+cd1680d Инициализация проекта SFMShop
+(END)
+d55f504 Добавлены уроки блока 1: основы Python
+cbbeb67 Add comment for function
+a466a11 (feature/test) Change .gitignore
+850f402 (master) Add .gitignore
+cd1680d Инициализация проекта SFMShop
+~
+$ git log --oneline feature/add-caching
+89114b1 (feature/add-caching) Добавлена система кэширования
+fdcfaab Добавлен метод get_category в Product
+d405e32 (feature/test-rebase) Добавлен другой комментарий
+dc93284 Merge remote-tracking branch 'origin/main'
+41dc851 Разрешен конфликт в get_total_price и добавлен комменатарий в user
+1ccd589 Изменен метод get_total_price в main
+05c2a50 (feature/test-conflict) Изменен метод get_total_price в feature/test-conflict
+c7d3e61 (origin/feature/add-inventory-management, feature/add-inventory-management) Добавлены методы управления складом в класс Product
+9924929 Merge pull request #1 from lidi-kitti/feature/add-email-validation
+a51cc8f (origin/feature/add-email-validation, feature/add-email-validation) Добавлена валидация email в класс User
+299c4d8 Добавлена система скидок в класс Product
+2cb3277 (feature/test-stash) Добавлены уроки блока 2: ООП
+d55f504 Добавлены уроки блока 1: основы Python
+cbbeb67 Add comment for function
+a466a11 (feature/test) Change .gitignore
+850f402 (master) Add .gitignore
+cd1680d Инициализация проекта SFMShop
