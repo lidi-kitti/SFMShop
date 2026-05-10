@@ -1,0 +1,19 @@
+$ git show fdcfaab7962b0fb507386ff0c690c4234558a503
+commit fdcfaab7962b0fb507386ff0c690c4234558a503 (HEAD -> main)
+Author: Lydia <lida.presnukhina@mail.ru>
+Date:   Sun May 10 16:52:11 2026 +0300
+
+    Добавлен метод get_category в Product
+
+diff --git a/src/models/product.py b/src/models/product.py
+index 5eeecae..6d83bf0 100644
+--- a/src/models/product.py
++++ b/src/models/product.py
+@@ -39,4 +39,6 @@ class Product:
+
+     def get_total_price(self):
+         #другой комментарий
++        pass
++    def get_category(self):
+         pass
+\ No newline at end of file
