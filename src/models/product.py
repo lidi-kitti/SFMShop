@@ -40,3 +40,5 @@ class Product:
     def get_total_price(self):
         #другой комментарий
         pass
+    def get_category(self):
+        pass
