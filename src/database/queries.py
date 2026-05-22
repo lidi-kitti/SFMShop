@@ -40,19 +40,16 @@ def get_order_statistics(conn):
     return results
 
 def get_user_order_history(conn, user_id):
-    """Получает историю заказов пользователя с информацией о товарах"""
     cursor = conn.cursor()
-    cursor.execute("""SELECT
- orders.id as order_id,
- products.name as product_name,
- order_items.quantity,
- products.price,
- orders.created_at
-FROM orders
-INNER JOIN order_items ON orders.id = order_items.order_id
-INNER JOIN products ON order_items.product_id = products.id
-WHERE orders.user_id = %s ORDER BY created_at DESC""",(user_id,)
-        )
+    cursor.execute("""
+        SELECT orders.id, orders.created_at, products.name,
+        order_items.quantity, products.price
+        FROM orders
+        INNER JOIN order_items ON orders.id = order_items.order_id
+        INNER JOIN products ON order_items.product_id = products.id
+        WHERE orders.user_id = %s
+        ORDER BY orders.created_at DESC
+        """, (user_id,))
     results = cursor.fetchall()
     cursor.close()
     return results

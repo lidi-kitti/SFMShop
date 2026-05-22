@@ -104,6 +104,23 @@ def create_order(conn, user_id, total):
     except Error as e:
         print(f"Ошибка при создании заказа: {e}")
 
+def delete_order(conn, order_id):
+    """Удалить заказ"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM orders WHERE id =%s",
+            (order_id)
+        )
+        deleted = cursor.rowcount
+        conn.commit()
+        cursor.close()
+        print(f"Заказ order_id = {order_id} удален")
+        return deleted
+    except Error as e:
+        print(f"Ошибка при удалении заказа: {e}")
+
+
 def get_user_orders(conn, user_id):
     """Получить заказы пользователя"""
     try:
@@ -119,31 +136,3 @@ def get_user_orders(conn, user_id):
         print(f"Ошибка при получении заказов: {e}")
         return []
 
-def main():
-    connection = connect_to_db()
-    try:
-        add_product(connection, "Ноутбук", 50000.00, 10)
-
-        all_products = get_all_products(connection)
-        print("Все товары: ", all_products)
-        for product in all_products:
-            print(product)
-            update_product_price(connection, 1, 45000.00)
-
-        create_user(connection, "Иван", "ivan@test.ru")
-
-        find_user = get_user_by_id(connection, 1)
-        if find_user:
-            print(f"Пользователь найден: {find_user}")
-
-        create_order(connection, 1,  50000.00)
-
-        user_order = get_user_orders(connection, 1)
-        print(f"Заказы пользователя: {user_order}")
-    except Exception as e:
-        print("Ошибка: ", e)
-    finally:
-        connection.close()
-
-if __name__ == "__main__":
-    main()
