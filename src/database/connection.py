@@ -56,6 +56,18 @@ def update_product_price(conn, product_id, new_price):
     cursor.close()
     print(f"Цена обновлена: {new_price}")
 
+def update_product(conn, product_id, new_data):
+    #обновляет цену
+    # Создание курсора
+    cursor = conn.cursor()
+
+    # Выполнение запроса
+    cursor.execute("UPDATE products SET name = %s, price = %s WHERE id = %s",
+    (new_data["name"], new_data["price"], product_id))
+    # Сохранить изменения
+    conn.commit()
+    cursor.close()
+    print(f"Название обновлено: {new_data}")
 def create_user(conn, name, email):
     """Создать пользователя"""
     try:

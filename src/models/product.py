@@ -1,4 +1,4 @@
-from models.exceptions import ValidationError
+from src.models.exceptions import ValidationError
 
 class Product:
     def __init__(self, name, price, quantity):
