@@ -43,6 +43,18 @@ def get_all_products(conn):
     cursor.close()
     return products
 
+def get_product_by_id(conn, product_id):
+    """Получить товар по ID"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM products WHERE id = %s", (product_id,))
+        product = cursor.fetchone()
+        cursor.close()
+        return product
+    except Error as e:
+        print(f"Ошибка при получении товара: {e}")
+        return None
+
 def update_product_price(conn, product_id, new_price):
     #обновляет цену
     # Создание курсора
@@ -57,17 +69,40 @@ def update_product_price(conn, product_id, new_price):
     print(f"Цена обновлена: {new_price}")
 
 def update_product(conn, product_id, new_data):
-    #обновляет цену
-    # Создание курсора
-    cursor = conn.cursor()
+    """Обновить товар"""
+    try:
+        existing = get_product_by_id(conn, product_id)
+        if not existing:
+            return None
 
-    # Выполнение запроса
-    cursor.execute("UPDATE products SET name = %s, price = %s WHERE id = %s",
-    (new_data["name"], new_data["price"], product_id))
-    # Сохранить изменения
-    conn.commit()
-    cursor.close()
-    print(f"Название обновлено: {new_data}")
+        name = new_data.get("name", existing[1])
+        price = new_data.get("price", existing[2])
+        quantity = new_data.get("quantity", existing[3])
+
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE products SET name = %s, price = %s, quantity = %s WHERE id = %s",
+            (name, price, quantity, product_id),
+        )
+        conn.commit()
+        cursor.close()
+        return get_product_by_id(conn, product_id)
+    except Error as e:
+        print(f"Ошибка при обновлении товара: {e}")
+        return None
+
+def delete_product(conn, product_id):
+    """Удалить товар"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM products WHERE id = %s", (product_id,))
+        deleted = cursor.rowcount
+        conn.commit()
+        cursor.close()
+        return deleted
+    except Error as e:
+        print(f"Ошибка при удалении товара: {e}")
+        return 0
 def create_user(conn, name, email):
     """Создать пользователя"""
     try:
@@ -107,14 +142,17 @@ def create_order(conn, user_id, total):
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO orders (user_id, total) VALUES (%s, %s)",
-            (user_id, total)
+            "INSERT INTO orders (user_id, total) VALUES (%s, %s) RETURNING id",
+            (user_id, total),
         )
+        order_id = cursor.fetchone()[0]
         conn.commit()
         cursor.close()
         print(f"Заказ создан: user_id={user_id}, total={total}")
+        return order_id
     except Error as e:
         print(f"Ошибка при создании заказа: {e}")
+        return None
 
 def delete_order(conn, order_id):
     """Удалить заказ"""
