@@ -26,3 +26,6 @@ build/
 *.egg-info/
 src/models/__pycache__/product.cpython-314.pyc
 src/models/__pycache__/user.cpython-314.pyc
+src/models/__pycache__/product.cpython-314.pyc
+src/models/__pycache__/user.cpython-314.pyc
+src/models/__pycache__/product.cpython-314.pyc

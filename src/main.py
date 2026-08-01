@@ -908,45 +908,83 @@ from models.exceptions import ValidationError, SFMShopException
 # if __name__ == "__main__":
 #     process_order_system()
 
-#Coomet for commit 1
-#Coomet for commit 2
-import psycopg2
-from psycopg2 import Error
-from database.connection import *
-from database.queries import *
+# #Coomet for commit 1
+# #Coomet for commit 2
+# import psycopg2
+# from psycopg2 import Error
+# from database.connection import *
+# from database.queries import *
 
-def main():
-    conn = connect_to_db()
-    if not conn:
-        return
+# def main():
+#     conn = connect_to_db()
+#     if not conn:
+#         return
 
-    try:
-        # Создать пользователя
-        create_user(conn, "Новый пользователь", "new1@test.com")
+#     try:
+#         # Создать пользователя
+#         create_user(conn, "Новый пользователь", "new1@test.com")
 
-        # Получить товары
-        products = get_all_products(conn)
-        print("Товары:", products)
+#         # Получить товары
+#         products = get_all_products(conn)
+#         print("Товары:", products)
 
-        # Получить пользователя
-        user = get_user_by_id(conn, 1)
-        print("Пользователь:", user)
+#         # Получить пользователя
+#         user = get_user_by_id(conn, 1)
+#         print("Пользователь:", user)
 
-        # Статистика
-        stats = get_order_statistics(conn)
-        print("Статистика:", stats)
+#         # Статистика
+#         stats = get_order_statistics(conn)
+#         print("Статистика:", stats)
 
-        # Топ товары
-        top = get_top_products(conn, 5)
-        print("Топ товары:", top)
+#         # Топ товары
+#         top = get_top_products(conn, 5)
+#         print("Топ товары:", top)
 
-        # История заказов
-        history = get_user_order_history(conn, 1)
-        print("История заказов:", history)
+#         # История заказов
+#         history = get_user_order_history(conn, 1)
+#         print("История заказов:", history)
 
-    finally:
-        conn.close()
+#     finally:
+#         conn.close()
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
+# Демонстрационный пример алгоритма (не записывается в SFMShop)
+import time
+
+class Product:
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
+
+# Создать большой список товаров
+products = [Product(i, f"Товар {i}") for i in range(10000)]
+
+def find_product_in_list(products, product_id):
+    for product in products:
+        if product.id == product_id:
+            return product
+    return None
+
+def find_product_in_dict(products_dict, product_id):
+    return products_dict.get(product_id)
+
+products_dict = {product.id: product for product in products}
+
+start = time.time()
+result_list = find_product_in_list(products, 5000)
+time_list = time.time() - start
+
+start = time.time()
+result_dict = find_product_in_dict(products_dict, 5000)
+time_dict = time.time() - start
+
+speedup = time_list / time_dict if time_dict > 0 else float("inf")
+
+print(f"Результат списка: {result_list.name if result_list else None}")
+print(f"Результат словаря: {result_dict.name if result_dict else None}")
+print(f"Результаты совпадают: {result_list is result_dict}")
+print(f"Время поиска в списке: {time_list:.6f} сек")
+print(f"Время поиска в словаре: {time_dict:.6f} сек")
+print(f"Ускорение: {speedup:.2f} раз")

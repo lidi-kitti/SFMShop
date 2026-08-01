@@ -1,4 +1,4 @@
-from src.models.exceptions import ValidationError
+from .exceptions import ValidationError
 
 
 class User:
