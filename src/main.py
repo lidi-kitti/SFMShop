@@ -992,52 +992,96 @@ from models.exceptions import ValidationError, SFMShopException
 # В файле src/main.py
 # Демонстрационный пример алгоритма (не записывается в SFMShop)
 
-class Product:
-    def __init__(self, id, name, price):
+# class Product:
+#     def __init__(self, id, name, price):
+#         self.id = id
+#         self.name = name
+#         self.price = price
+
+#     def __str__(self):
+#         return f"ID {self.id}: {self.name} — {self.price} руб."
+
+
+# def binary_search_by_id(items, target):
+#     """Бинарный поиск товара по ID (O(log n)). Верни товар или None."""
+#     left = 0
+#     right = len(items) - 1
+
+#     while left <= right:
+#         mid = (left + right) // 2
+#         mid_id = items[mid].id
+#         if mid_id == target:
+#             return items[mid]
+#         elif mid_id < target:
+#             left = mid + 1
+#         else:
+#             right = mid - 1
+
+#     return None
+
+
+# def main():
+#     products = [
+#         Product(105, "Мышь", 1500),
+#         Product(101, "Ноутбук", 50000),
+#         Product(110, "Монитор", 18000),
+#         Product(103, "Клавиатура", 3000),
+#         Product(108, "Наушники", 7000),
+#     ]
+#     # Отсортируй по ID, выведи каталог, найди товары по ID 108, 110, 104
+#     products.sort(key=lambda x: x.id)
+#     for product in products:
+#         print(product)
+#     result = binary_search_by_id(products, 108)
+#     print(result)
+#     result = binary_search_by_id(products, 110)
+#     print(result)
+#     result = binary_search_by_id(products, 104)
+#     print(result)
+# if __name__ == "__main__":
+#     main()
+
+# Файл src/main.py
+import time
+from datetime import datetime
+
+class Order:
+    def __init__(self, id, created_at, total):
         self.id = id
-        self.name = name
-        self.price = price
-
-    def __str__(self):
-        return f"ID {self.id}: {self.name} — {self.price} руб."
+        self.created_at = created_at
+        self.total = total
 
 
-def binary_search_by_id(items, target):
-    """Бинарный поиск товара по ID (O(log n)). Верни товар или None."""
-    left = 0
-    right = len(items) - 1
+orders = [Order(i, datetime.now(), 10000) for i in range(10000)]
 
-    while left <= right:
-        mid = (left + right) // 2
-        mid_id = items[mid].id
-        if mid_id == target:
-            return items[mid]
-        elif mid_id < target:
-            left = mid + 1
-        else:
-            right = mid - 1
+def bubble_sort(items):
+    """Пузырьковая сортировка: O(n²), только для учёбы"""
+    items = items.copy()  # не трогаем исходный список
+    n = len(items)
+    for i in range(n):
+        swapped = False
+        # после каждого прохода хвост уже отсортирован,
+        # поэтому правая граница сдвигается: n - i - 1
+        for j in range(n - i - 1):
+            if items[j].created_at > items[j + 1].created_at:
+                items[j], items[j + 1] = items[j + 1], items[j]
+                swapped = True
+        if not swapped:  # ни одного обмена - список готов
+            break
+    return items
 
-    return None
+def sorted_orders(items):
+    return sorted(items, key=lambda x: x.created_at)
 
+time_start = time.time()
+bubble_sort(orders)
+time_end = time.time()
+print(f"Время сортировки: {time_end - time_start:.6f} сек")
 
-def main():
-    products = [
-        Product(105, "Мышь", 1500),
-        Product(101, "Ноутбук", 50000),
-        Product(110, "Монитор", 18000),
-        Product(103, "Клавиатура", 3000),
-        Product(108, "Наушники", 7000),
-    ]
-    # Отсортируй по ID, выведи каталог, найди товары по ID 108, 110, 104
-    products.sort(key=lambda x: x.id)
-    for product in products:
-        print(product)
-    result = binary_search_by_id(products, 108)
-    print(result)
-    result = binary_search_by_id(products, 110)
-    print(result)
-    result = binary_search_by_id(products, 104)
-    print(result)
+time_start = time.time()
+sorted_orders(orders)
+time_end = time.time()
+print(f"Время сортировки: {time_end - time_start:.6f} сек")
 
-if __name__ == "__main__":
-    main()
+speedup = time_start / time_end if time_end > 0 else float("inf")
+print(f"Ускорение: {speedup:.2f} раз")
