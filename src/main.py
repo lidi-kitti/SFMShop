@@ -1041,47 +1041,16 @@ from models.exceptions import ValidationError, SFMShopException
 # if __name__ == "__main__":
 #     main()
 
-# Файл src/main.py
-import time
-from datetime import datetime
+# Файл src/main.py — тестирование оптимизаций из utils.calculations
+from utils.calculations import benchmark_optimizations, create_test_products, create_products_catalog
 
-class Order:
-    def __init__(self, id, created_at, total):
-        self.id = id
-        self.created_at = created_at
-        self.total = total
+if __name__ == "__main__":
+    # Демонстрация каталога товаров (словарь O(1))
+    products = create_test_products(1000)
+    catalog = create_products_catalog(products)
+    print(f"Каталог создан: {len(catalog)} товаров")
+    print(f"Поиск ID=500: {catalog.get(500).name}")
+    print()
 
-
-orders = [Order(i, datetime.now(), 10000) for i in range(10000)]
-
-def bubble_sort(items):
-    """Пузырьковая сортировка: O(n²), только для учёбы"""
-    items = items.copy()  # не трогаем исходный список
-    n = len(items)
-    for i in range(n):
-        swapped = False
-        # после каждого прохода хвост уже отсортирован,
-        # поэтому правая граница сдвигается: n - i - 1
-        for j in range(n - i - 1):
-            if items[j].created_at > items[j + 1].created_at:
-                items[j], items[j + 1] = items[j + 1], items[j]
-                swapped = True
-        if not swapped:  # ни одного обмена - список готов
-            break
-    return items
-
-def sorted_orders(items):
-    return sorted(items, key=lambda x: x.created_at)
-
-time_start = time.time()
-bubble_sort(orders)
-time_end = time.time()
-print(f"Время сортировки: {time_end - time_start:.6f} сек")
-
-time_start = time.time()
-sorted_orders(orders)
-time_end = time.time()
-print(f"Время сортировки: {time_end - time_start:.6f} сек")
-
-speedup = time_start / time_end if time_end > 0 else float("inf")
-print(f"Ускорение: {speedup:.2f} раз")
+    # Полный бенчмарк оптимизаций
+    benchmark_optimizations()
