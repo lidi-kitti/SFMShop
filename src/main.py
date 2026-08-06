@@ -1042,15 +1042,75 @@ from models.exceptions import ValidationError, SFMShopException
 #     main()
 
 # Файл src/main.py — тестирование оптимизаций из utils.calculations
-from utils.calculations import benchmark_optimizations, create_test_products, create_products_catalog
+# from utils.calculations import benchmark_optimizations, create_test_products, create_products_catalog
 
-if __name__ == "__main__":
-    # Демонстрация каталога товаров (словарь O(1))
-    products = create_test_products(1000)
-    catalog = create_products_catalog(products)
-    print(f"Каталог создан: {len(catalog)} товаров")
-    print(f"Поиск ID=500: {catalog.get(500).name}")
-    print()
+# if __name__ == "__main__":
+#     # Демонстрация каталога товаров (словарь O(1))
+#     products = create_test_products(1000)
+#     catalog = create_products_catalog(products)
+#     print(f"Каталог создан: {len(catalog)} товаров")
+#     print(f"Поиск ID=500: {catalog.get(500).name}")
+#     print()
 
-    # Полный бенчмарк оптимизаций
-    benchmark_optimizations()
+#     # Полный бенчмарк оптимизаций
+#     benchmark_optimizations()
+
+# В файле src/main.py
+from abc import ABC, abstractmethod
+
+
+class Discount(ABC):
+    """Абстрактный класс скидки"""
+    @abstractmethod
+    def apply(total_price):
+        """Применить скидку к общей стоимости"""
+        pass
+    @abstractmethod
+    def describe():
+        pass
+
+class PercentageDiscount(Discount):
+    """Скидка в процентах"""
+    def __init__(self, percentage):
+        self.percentage = percentage
+    def apply(total_price):
+        return total_price * (1 - self.percentage / 100)
+    def describe():
+        return f"Скидка {self.percentage}%"
+
+class FixedDiscount(Discount):
+    """Фиксированная скидка"""
+    def __init__(self, fixed_discount):
+        self.fixed_discount = fixed_discount
+    def apply(total_price):
+        return total_price - self.fixed_discount
+    def describe():
+        return f"Скидка {self.fixed_discount} руб."
+    
+class Cart()
+    def __init__(self, discount: Discount):
+        self.discount = discount
+        self.items = []
+
+    def add(self, name: str, price: float) -> None:
+        self.items.append((name, price))
+
+    def total(self) -> float:
+        base = sum(price for _, price in self.items)
+        return self.discount.apply(base)
+
+def checkout(cart: Cart) -> None:
+    """Полиморфизм: работает с любой скидкой"""
+    print(f"Товаров в корзине: {len(cart.items)}")
+    print(f"Скидка: {cart.discount.describe()}")
+    print(f"К оплате: {cart.total():.2f} руб.")
+
+# Использование
+cart1 = Cart(PercentDiscount(20))
+cart1.add("Футболка", 1500)
+cart1.add("Кепка", 1000)
+checkout(cart1)
+
+cart2 = Cart(FixedDiscount(500))
+cart2.add("Худи", 3000)
+checkout(cart2)
