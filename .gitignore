@@ -1,28 +1,67 @@
 # Кэш и скомпилированные файлы Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+*.so
 
 # Виртуальное окружение
 venv/
 .venv/
+env/
+ENV/
 
 # Переменные окружения (пароли, ключи API)
 .env
+.env.*
+!.env.example
 
-# Настройки редакторов
+# Настройки редакторов / IDE
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
 
 # Системные файлы
 .DS_Store
+Thumbs.db
+Desktop.ini
 
 # Логи
 *.log
+logs/
 
-# Папки сборки
+# Папки сборки и дистрибутивы
 dist/
 build/
 *.egg-info/
-src/models/__pycache__/
+*.egg
+.eggs/
+pip-wheel-metadata/
 
+# Тесты и покрытие
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+
+# Type checkers / linters
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.pyre/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Локальные БД / дампы
+*.db
+*.sqlite3
+*.sql.gz
+
+# Cursor / локальные артефакты агента
+.cursor/
