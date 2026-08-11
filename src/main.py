@@ -1054,7 +1054,8 @@ from models.exceptions import ValidationError, SFMShopException
 
 #     # Полный бенчмарк оптимизаций
 #     benchmark_optimizations()
-# В файле src/main.py
+
+# В файле src/main.py — магические методы корзины
 class Cart:
     def __init__(self):
         self.items = []  # список кортежей (название, цена)
@@ -1072,6 +1073,7 @@ class Cart:
     def __call__(self):
         return sum(item[1] for item in self.items)
 
+
 cart = Cart()
 cart = cart + ("Ноутбук", 75000)
 cart = cart + ("Мышь", 1200)
@@ -1082,3 +1084,76 @@ print(cart[0][0])
 for name, price in cart:
     print(f"{name}: {price}")
 print(cart())
+
+# В файле src/main.py — полиморфизм скидок
+from abc import ABC, abstractmethod
+
+
+class Discount(ABC):
+    """Абстрактный класс скидки"""
+
+    @abstractmethod
+    def apply(self, total_price):
+        """Применить скидку к общей стоимости"""
+        pass
+
+    @abstractmethod
+    def describe(self):
+        pass
+
+
+class PercentageDiscount(Discount):
+    """Скидка в процентах"""
+
+    def __init__(self, percentage):
+        self.percentage = percentage
+
+    def apply(self, total_price):
+        return total_price * (1 - self.percentage / 100)
+
+    def describe(self):
+        return f"Скидка {self.percentage}%"
+
+
+class FixedDiscount(Discount):
+    """Фиксированная скидка"""
+
+    def __init__(self, fixed_discount):
+        self.fixed_discount = fixed_discount
+
+    def apply(self, total_price):
+        return total_price - self.fixed_discount
+
+    def describe(self):
+        return f"Скидка {self.fixed_discount} руб."
+
+
+class DiscountCart:
+    def __init__(self, discount: Discount):
+        self.discount = discount
+        self.items = []
+
+    def add(self, name: str, price: float) -> None:
+        self.items.append((name, price))
+
+    def total(self) -> float:
+        base = sum(price for _, price in self.items)
+        return self.discount.apply(base)
+
+
+def checkout(cart: DiscountCart) -> None:
+    """Полиморфизм: работает с любой скидкой"""
+    print(f"Товаров в корзине: {len(cart.items)}")
+    print(f"Скидка: {cart.discount.describe()}")
+    print(f"К оплате: {cart.total():.2f} руб.")
+
+
+# Использование
+cart1 = DiscountCart(PercentageDiscount(20))
+cart1.add("Футболка", 1500)
+cart1.add("Кепка", 1000)
+checkout(cart1)
+
+cart2 = DiscountCart(FixedDiscount(500))
+cart2.add("Худи", 3000)
+checkout(cart2)
