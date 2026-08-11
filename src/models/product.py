@@ -1,17 +1,19 @@
-from .exceptions import ValidationError
+from exceptions import ValidationError
+from dataclasses import dataclass
 
+@dataclass
 class Product:
-    def __init__(self, name, price, quantity):
-        self.name = name
-        self.price = price
-        self.quantity = quantity
+    name: str
+    price: float
+    quantity: int
 
-    def __str__(self):
-        return f"Товар: {self.name}, Цена: {self.price} руб., Количество: {self.quantity}"
-
-    def __repr__(self):
-        return f"Product('{self.name}', {self.price}, {self.quantity})"
-
+    def __post_init__(self):
+        """Валидация после инициализации"""
+        if self.price < 0:
+            raise ValueError("Цена не может быть отрицательной")
+        if self.quantity < 0:
+            raise ValueError("Количество не может быть отрицательным")
+   
     def __lt__(self, other):
         if not isinstance(other, Product):
             return NotImplemented
@@ -44,3 +46,12 @@ class Product:
         pass
     def get_category(self):
         pass
+
+# Тестирование
+try:
+    product = Product("Ноутбук", -1000, 10) # Ошибка при создании
+except ValueError as e:
+    print(f"Ошибка: {e}")
+
+product = Product("Ноутбук", 1000, 10)
+print(product.price) # 1000
