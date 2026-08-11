@@ -55,14 +55,17 @@ class Product:
     def calculate_discount(price, discount_percent):
         return price * (1 - discount_percent / 100)
 
+    
+
 
 # Тестирование
-raw_products = [
-    {"name": "Ноутбук", "price": 1000, "quantity": 10},
-    {"name": "Мышь", "price": 500, "quantity": 20},
-    {"name": "Клавиатура", "price": 800, "quantity": 5},
-]
-products = [Product.from_dict(product) for product in raw_products]
-for product in products:
-    print(product)
-    print(product.calculate_discount(product.price, 25)) 
+# Обычный способ
+product1 = Product("Ноутбук", 1000, 10)
+
+# Альтернативный способ
+data = {"name": "Мышь", "price": 500, "quantity": 20}
+product2 = Product.from_dict(data)
+
+# Статический метод
+discounted_price = Product.calculate_discount(1000, 10)  # 900
+print(f"Цена со скидкой: {discounted_price}")

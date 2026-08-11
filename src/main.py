@@ -860,11 +860,11 @@
 #     print("Ошибка проекта:", e)
 
 ### финальная задача ООП
-from models.product import Product
-from models.user import User
-from models.order import Order
-from models.payment import CardPayment, PayPalPayment
-from models.exceptions import ValidationError, SFMShopException
+# from models.product import Product
+# from models.user import User
+# from models.order import Order
+# from models.payment import CardPayment, PayPalPayment
+# from models.exceptions import ValidationError, SFMShopException
 #
 #
 # def process_order_system():
@@ -1157,3 +1157,30 @@ checkout(cart1)
 cart2 = DiscountCart(FixedDiscount(500))
 cart2.add("Худи", 3000)
 checkout(cart2)
+
+# В файле src/main.py
+class Product:
+    def __init__(self, name, price):
+        self.name = name
+        self.price = price  # присваивание пройдёт через сеттер
+
+    @property
+    def price(self):
+        return self._price
+    @price.setter
+    def price(self, value):
+        if value < 0:
+            raise ValueError("Цена не может быть отрицательной")
+        self._price = value
+
+
+product = Product("Ноутбук", 1000)
+print(product.price)
+product.price = 2000
+print(product.price)
+try:
+    product.price = -100
+except ValueError as e:
+    print(e)
+product.price = 2000
+print(product.price)
