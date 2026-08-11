@@ -46,12 +46,23 @@ class Product:
         pass
     def get_category(self):
         pass
+    
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data["name"], data["price"], data["quantity"])
+
+    @staticmethod
+    def calculate_discount(price, discount_percent):
+        return price * (1 - discount_percent / 100)
+
 
 # Тестирование
-try:
-    product = Product("Ноутбук", -1000, 10) # Ошибка при создании
-except ValueError as e:
-    print(f"Ошибка: {e}")
-
-product = Product("Ноутбук", 1000, 10)
-print(product.price) # 1000
+raw_products = [
+    {"name": "Ноутбук", "price": 1000, "quantity": 10},
+    {"name": "Мышь", "price": 500, "quantity": 20},
+    {"name": "Клавиатура", "price": 800, "quantity": 5},
+]
+products = [Product.from_dict(product) for product in raw_products]
+for product in products:
+    print(product)
+    print(product.calculate_discount(product.price, 25)) 
