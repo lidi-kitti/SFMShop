@@ -1042,15 +1042,43 @@ from models.exceptions import ValidationError, SFMShopException
 #     main()
 
 # Файл src/main.py — тестирование оптимизаций из utils.calculations
-from utils.calculations import benchmark_optimizations, create_test_products, create_products_catalog
+# from utils.calculations import benchmark_optimizations, create_test_products, create_products_catalog
 
-if __name__ == "__main__":
-    # Демонстрация каталога товаров (словарь O(1))
-    products = create_test_products(1000)
-    catalog = create_products_catalog(products)
-    print(f"Каталог создан: {len(catalog)} товаров")
-    print(f"Поиск ID=500: {catalog.get(500).name}")
-    print()
+# if __name__ == "__main__":
+#     # Демонстрация каталога товаров (словарь O(1))
+#     products = create_test_products(1000)
+#     catalog = create_products_catalog(products)
+#     print(f"Каталог создан: {len(catalog)} товаров")
+#     print(f"Поиск ID=500: {catalog.get(500).name}")
+#     print()
 
-    # Полный бенчмарк оптимизаций
-    benchmark_optimizations()
+#     # Полный бенчмарк оптимизаций
+#     benchmark_optimizations()
+# В файле src/main.py
+class Cart:
+    def __init__(self):
+        self.items = []  # список кортежей (название, цена)
+
+    def __add__(self, item):
+        self.items.append(item)
+        return self
+
+    def __len__(self):
+        return len(self.items)
+
+    def __getitem__(self, index):
+        return self.items[index]
+
+    def __call__(self):
+        return sum(item[1] for item in self.items)
+
+cart = Cart()
+cart = cart + ("Ноутбук", 75000)
+cart = cart + ("Мышь", 1200)
+cart = cart + ("Клавиатура", 3500)
+
+print(len(cart))
+print(cart[0][0])
+for name, price in cart:
+    print(f"{name}: {price}")
+print(cart())

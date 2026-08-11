@@ -26,3 +26,4 @@ build/
 *.egg-info/
 src/models/__pycache__/
 
+src/models/__pycache__/order.cpython-314.pyc
