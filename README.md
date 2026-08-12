@@ -1,4 +1,4 @@
-# SFMShop
+  # SFMShop
 
 Учебный интернет-магазин на Python: модели предметной области, PostgreSQL и REST API на FastAPI.
 
