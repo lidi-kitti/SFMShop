@@ -860,11 +860,11 @@
 #     print("Ошибка проекта:", e)
 
 ### финальная задача ООП
-from models.product import Product
-from models.user import User
-from models.order import Order
-from models.payment import CardPayment, PayPalPayment
-from models.exceptions import ValidationError, SFMShopException
+# from models.product import Product
+# from models.user import User
+# from models.order import Order
+# from models.payment import CardPayment, PayPalPayment
+# from models.exceptions import ValidationError, SFMShopException
 #
 #
 # def process_order_system():
@@ -1055,39 +1055,80 @@ from models.exceptions import ValidationError, SFMShopException
 #     # Полный бенчмарк оптимизаций
 #     benchmark_optimizations()
 
-# В файле src/main.py
+# В файле src/main.py — магические методы корзины
+class Cart:
+    def __init__(self):
+        self.items = []  # список кортежей (название, цена)
+
+    def __add__(self, item):
+        self.items.append(item)
+        return self
+
+    def __len__(self):
+        return len(self.items)
+
+    def __getitem__(self, index):
+        return self.items[index]
+
+    def __call__(self):
+        return sum(item[1] for item in self.items)
+
+
+cart = Cart()
+cart = cart + ("Ноутбук", 75000)
+cart = cart + ("Мышь", 1200)
+cart = cart + ("Клавиатура", 3500)
+
+print(len(cart))
+print(cart[0][0])
+for name, price in cart:
+    print(f"{name}: {price}")
+print(cart())
+
+# В файле src/main.py — полиморфизм скидок
 from abc import ABC, abstractmethod
 
 
 class Discount(ABC):
     """Абстрактный класс скидки"""
+
     @abstractmethod
-    def apply(total_price):
+    def apply(self, total_price):
         """Применить скидку к общей стоимости"""
         pass
+
     @abstractmethod
-    def describe():
+    def describe(self):
         pass
+
 
 class PercentageDiscount(Discount):
     """Скидка в процентах"""
+
     def __init__(self, percentage):
         self.percentage = percentage
-    def apply(total_price):
+
+    def apply(self, total_price):
         return total_price * (1 - self.percentage / 100)
-    def describe():
+
+    def describe(self):
         return f"Скидка {self.percentage}%"
+
 
 class FixedDiscount(Discount):
     """Фиксированная скидка"""
+
     def __init__(self, fixed_discount):
         self.fixed_discount = fixed_discount
-    def apply(total_price):
+
+    def apply(self, total_price):
         return total_price - self.fixed_discount
-    def describe():
+
+    def describe(self):
         return f"Скидка {self.fixed_discount} руб."
-    
-class Cart()
+
+
+class DiscountCart:
     def __init__(self, discount: Discount):
         self.discount = discount
         self.items = []
@@ -1099,18 +1140,47 @@ class Cart()
         base = sum(price for _, price in self.items)
         return self.discount.apply(base)
 
-def checkout(cart: Cart) -> None:
+
+def checkout(cart: DiscountCart) -> None:
     """Полиморфизм: работает с любой скидкой"""
     print(f"Товаров в корзине: {len(cart.items)}")
     print(f"Скидка: {cart.discount.describe()}")
     print(f"К оплате: {cart.total():.2f} руб.")
 
+
 # Использование
-cart1 = Cart(PercentDiscount(20))
+cart1 = DiscountCart(PercentageDiscount(20))
 cart1.add("Футболка", 1500)
 cart1.add("Кепка", 1000)
 checkout(cart1)
 
-cart2 = Cart(FixedDiscount(500))
+cart2 = DiscountCart(FixedDiscount(500))
 cart2.add("Худи", 3000)
 checkout(cart2)
+
+# В файле src/main.py
+class Product:
+    def __init__(self, name, price):
+        self.name = name
+        self.price = price  # присваивание пройдёт через сеттер
+
+    @property
+    def price(self):
+        return self._price
+    @price.setter
+    def price(self, value):
+        if value < 0:
+            raise ValueError("Цена не может быть отрицательной")
+        self._price = value
+
+
+product = Product("Ноутбук", 1000)
+print(product.price)
+product.price = 2000
+print(product.price)
+try:
+    product.price = -100
+except ValueError as e:
+    print(e)
+product.price = 2000
+print(product.price)
