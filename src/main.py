@@ -412,24 +412,24 @@ print(info_3)
 error_message = "Ошибка: товар не найден на складе\n"
 
 # Использование контекстного менеджера и режима 'a'
-with open("data/errors.log", "a", encoding="utf-8") as file:
+with open("src/data/errors.log", "a", encoding="utf-8") as file:
     file.write(error_message)
 # Файл автоматически закрывается
 
 # Практика: Задание 1 - Чтение и запись товаров
 # Чтение товаров из файла
-with open("data/products.txt", "r", encoding="utf-8") as file:
+with open("src/data/products.txt", "r", encoding="utf-8") as file:
     lines = file.readlines()
 
 # Обработка товаров и запись в новый файл
-with open("data/products_with_prices.txt", "w", encoding="utf-8") as file:
+with open("src/data/products_with_prices.txt", "w", encoding="utf-8") as file:
     for line in lines:
         product = line.strip()  # Удаляем символ переноса строки
         product_with_price = product + " - 1000 руб.\n"
         file.write(product_with_price)
 
 # Практика: Задание 2 - Подсчёт заказов в файле
-with open("data/orders.txt", "r", encoding="utf-8") as file:
+with open("src/data/orders.txt", "r", encoding="utf-8") as file:
     lines = file.readlines()
 
 orders = [line for line in lines if line.strip()]
@@ -449,7 +449,7 @@ promo_code = "PROMO" + str(promo_number)
 print("Промо-код:", promo_code)
 
 # Практика: Задание 1 - Создание модуля расчетов
-from src.utils.calculations import calculate_discount
+from utils.calculations import calculate_discount
 
 discount_1 = calculate_discount(1000, 0.1)
 discount_2 = calculate_discount(5000, 0.15)
@@ -458,10 +458,10 @@ print("Скидка для товара 1:", discount_1)
 print("Скидка для товара 2:", discount_2)
 
 # Практика: Задание 2 - Функция скидки в отдельном модуле
-import discounts
+# from utils.discounts import apply_discount
 
-result = discounts.apply_discount(2000, 25)
-print(f"Цена со скидкой: {result} руб.")
+# result = discounts.apply_discount(2000, 25)
+# print(f"Цена со скидкой: {result} руб.")
 
 # ==================
 # УРОК 11: ОБЛАСТИ ВИДИМОСТИ ПЕРЕМЕННЫХ
@@ -638,9 +638,9 @@ print(f"Найдены цены: {prices}")
 # ==================
 
 # Менторское задание: классы Product, User, Order используются вместе
-from src.models.product import Product
-from src.models.user import User
-from src.models.order import Order
+from models.product import Product
+from models.user import User
+from models.order import Order
 
 # Создание объектов
 user = User("Иван Иванов", "ivan@test.ru")
@@ -759,7 +759,7 @@ for product in products:
 
 # Решение задачи от тимлида - читаемый вывод и сравнение товаров
 # В src/models/product.py добавлены __str__, __repr__, __lt__, __eq__
-from src.models.product import Product
+from models.product import Product
 
 laptop = Product("Ноутбук", 50000, 10)
 print(laptop)  # Товар: Ноутбук, Цена: 50000 руб., Количество: 10
@@ -887,10 +887,10 @@ for qty in requests:
 # Менторское задание - Обработка исключений в классах
 # Классы валидируют данные и бросают исключения через raise,
 # вызывающий код обрабатывает их через try/except
-from src.models.product import Product
-from src.models.user import User
-from src.models.order import Order
-from src.models.exceptions import NegativePriceError
+from models.product import Product
+from models.user import User
+from models.order import Order
+from models.exceptions import NegativePriceError
 
 try:
     product = Product("Ноутбук", -50000, 10)
