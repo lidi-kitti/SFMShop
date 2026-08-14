@@ -1,20 +1,17 @@
 from exceptions import ValidationError
 from dataclasses import dataclass
 from metaclasses import ModelMeta
+from descriptors import PositiveNumber
 
 class Product(metaclass=ModelMeta):
+    price = PositiveNumber("price")
+    quantity = PositiveNumber("quantity")
+
     def __init__(self, name, price, quantity):
         self.name = name
         self.price = price
         self.quantity = quantity
 
-    def __post_init__(self):
-        """Валидация после инициализации"""
-        if self.price < 0:
-            raise ValueError("Цена не может быть отрицательной")
-        if self.quantity < 0:
-            raise ValueError("Количество не может быть отрицательным")
-   
     def __lt__(self, other):
         if not isinstance(other, Product):
             return NotImplemented
@@ -58,16 +55,16 @@ class Product(metaclass=ModelMeta):
 
     
 
-
 # Тестирование
-# Обычный способ
-product1 = Product("Ноутбук", 1000, 10)
+product = Product("Ноутбук", 1000, 10)
+print(product.price) # 1000
 
-# Альтернативный способ
-data = {"name": "Мышь", "price": 500, "quantity": 20}
-product2 = Product.from_dict(data)
+try:
+    product.price = -100 # Ошибка: ValueError
+except ValueError as e:
+    print(f"Ошибка: {e}")
 
-# Статический метод
-discounted_price = Product.calculate_discount(1000, 10)  # 900
-print(f"Цена со скидкой: {discounted_price}")
-
+try:
+    product.quantity = -5 # Ошибка: ValueError
+except ValueError as e:
+    print(f"Ошибка: {e}")
