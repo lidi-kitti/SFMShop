@@ -1,15 +1,14 @@
-# Файл src/models/metaclasses.py
 class ModelMeta(type):
-    """Метакласс, который автоматически регистрирует классы моделей в реестре"""
-    _registry = {}
-    
+    """Метакласс для автоматического добавления методов"""
+
     def __new__(cls, name, bases, attrs):
+        """Вызывается при создании класса"""
+        # Добавить метод to_dict() ко всем классам
         def to_dict(self):
+            """Преобразовать объект в словарь"""
             return self.__dict__
 
         attrs["to_dict"] = to_dict
-        
-        new_class = super().__new__(cls, name, bases, attrs)
-        if name != "Model":
-            cls._registry[name] = new_class
-        return new_class
+
+        # Создать класс
+        return super().__new__(cls, name, bases, attrs)

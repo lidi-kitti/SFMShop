@@ -1,12 +1,18 @@
-
 class SFMShopException(Exception):
+    """Базовое исключение для проекта SFMShop"""
     pass
 
-class ValidationError(SFMShopException):
-    """для ошибок валидации"""
+
+class InsufficientStockError(SFMShopException):
+    """Товара недостаточно на складе"""
     pass
 
-class BusinessLogicError(SFMShopException):
-    """для ошибок бизнес-логики"""
+
+class InvalidOrderError(SFMShopException):
+    """Заказ невалиден"""
     pass
 
+
+class NegativePriceError(Exception):
+    """Цена не может быть отрицательной"""
+    pass

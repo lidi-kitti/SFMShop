@@ -1,39 +1,31 @@
-# Файл src/models/delivery.py
 from abc import ABC, abstractmethod
+
 
 class Delivery(ABC):
     """Абстрактный класс для доставки"""
-    def __init__(self, order):
-        self.order = order
 
     @abstractmethod
-    def calculate_cost(self):
-        """Расчет стоимости доставки"""
+    def calculate_cost(self, distance: float) -> float:
+        """Рассчитать стоимость доставки"""
         pass
 
-class StandartDelivery(Delivery):
-    """Стандартная доставка"""
-    def __init__(self, order):
-        self.order = order
 
-    def calculate_cost(self):
-        """Расчет стоимости доставки"""
-        return 100
+class StandardDelivery(Delivery):
+    """Стандартная доставка"""
+
+    def calculate_cost(self, distance: float) -> float:
+        """Стоимость = расстояние * 10"""
+        return distance * 10
 
 
 class ExpressDelivery(Delivery):
-    """Экспресс доставка"""
-    def __init__(self, order):
-        self.order = order
+    """Экспресс-доставка"""
 
-    def calculate_cost(self):
-        """Расчет стоимости доставки"""
-        return 200
+    def calculate_cost(self, distance: float) -> float:
+        """Стоимость = расстояние * 20"""
+        return distance * 20
 
 
-class PickupDelivery(Delivery):
-    """Самовывоз"""
-    def __init__(self, order):
-        self.order = order
-
-    def calculate_cost(self):
+def process_delivery(delivery: Delivery, distance: float) -> float:
+    """Обработать доставку - работает с любым типом Delivery (полиморфизм)"""
+    return delivery.calculate_cost(distance)

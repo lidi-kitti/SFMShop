@@ -1,13 +1,12 @@
-from .exceptions import ValidationError
-
-
 class User:
+
     def __init__(self, name, email):
         self.name = name
-        self._email = email
-
-    def set_email(self, email):
-        #Проверка формата почты
         if "@" not in email:
-            raise ValidationError("Неверный формат email")
-        self._email = email
+            raise ValueError("Неверный формат email")
+        self.email = email
+
+    def get_info(self):
+        return 'Пользователь: ' + self.name + ', Email: ' + self.email
+
+# TODO: проверять, что в email есть @ и точка

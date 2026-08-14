@@ -1,255 +1,121 @@
 # Файл src/utils/calculations.py
-"""Расчёты и оптимизации поиска/сортировки для SFMShop."""
-
-from __future__ import annotations
-
 import time
-from datetime import datetime, timedelta
-from typing import Any, Optional
 
 
-# --- Базовые расчёты ---
-
-
-def calculate_discount(price: float, discount_rate: float) -> float:
-    """Скидка: price * rate (например, 0.1 = 10%)."""
+def calculate_discount(price, discount_rate):
     return price * discount_rate
 
 
-def calculate_delivery(weight: float, base_cost: float = 100) -> float:
-    return base_cost + weight * 10
+def calculate_total(price, quantity):
+    return price * quantity
 
 
-def calculate_final_price(price: float, discount: float, delivery: float) -> float:
-    return price - discount + delivery
+# --- Оптимизация обработки заказов: замер производительности ---
+# Исходная функция (медленная) — O(N * M)
+# каждый раз обходит все items во всех заказах
 
 
-# --- Вспомогательные модели для бенчмарков ---
+def calculate_total_orders_slow(orders):
+    """Медленный подход: обходит все item'ы каждого заказа"""
+    total = 0
+    for order in orders:
+        for item in order.items:
+            total += item.price * item.quantity
+    return total
 
 
-class Product:
-    def __init__(self, id: int, name: str, price: float):
-        self.id = id
-        self.name = name
-        self.price = price
+# Оптимизированная функция (быстрая) — O(N)
+# использует предвычисленный order.total
 
 
-class Order:
-    def __init__(self, id: int, created_at: datetime, total: float):
-        self.id = id
-        self.created_at = created_at
-        self.total = total
+def calculate_total_orders(orders):
+    """Быстрый подход: сумма по предвычисленным order.total"""
+    return sum(order.total for order in orders)
 
 
-# --- 1. Поиск: O(n) список → O(1) словарь ---
+def benchmark_calculate_total(orders):
+    """Измерить производительность обеих функций"""
+    # Медленная версия
+    start_time = time.time()
+    result_slow = calculate_total_orders_slow(orders)
+    time_slow = time.time() - start_time
+
+    # Быстрая версия
+    start_time = time.time()
+    result_fast = calculate_total_orders(orders)
+    time_fast = time.time() - start_time
+
+    # Сравнение
+    speedup = time_slow / time_fast if time_fast > 0 else 0
+
+    print(f"Медленная версия: {time_slow:.4f} секунд")
+    print(f"Быстрая версия: {time_fast:.4f} секунд")
+    print(f"Ускорение: {speedup:.2f}x")
+    print(f"Результаты совпадают: {result_slow == result_fast}")
+
+    return {
+        "time_slow": time_slow,
+        "time_fast": time_fast,
+        "speedup": speedup,
+        "result": result_fast,
+    }
 
 
-def find_product_in_list(products: list[Product], product_id: int) -> Optional[Product]:
-    """Линейный поиск в списке: O(n)."""
+# --- Поиск по словарю-индексу: список (O(n)) vs словарь (O(1)) ---
+
+
+def find_product_in_list(products, product_id):
+    """Поиск в списке (медленный, O(n))"""
     for product in products:
         if product.id == product_id:
             return product
     return None
 
 
-def create_products_catalog(products: list[Product]) -> dict[int, Product]:
-    """Словарь для быстрого поиска товаров по ID: O(n) построение, O(1) поиск."""
+def create_products_index(products):
+    """Создать словарь для быстрого поиска (O(1))"""
     return {product.id: product for product in products}
 
 
-def find_product(products_index: dict[int, Product], product_id: int) -> Optional[Product]:
-    """Поиск в словаре: O(1)."""
-    return products_index.get(product_id)
+def find_product_in_dict(products_dict, product_id):
+    """Поиск в словаре (быстрый, O(1))"""
+    return products_dict.get(product_id)
 
 
-# --- 2. Имена товаров: цикл + append → list comprehension ---
-
-
-def get_product_names_slow(products: list[Product]) -> list[str]:
-    """До оптимизации: цикл с append."""
-    names = []
-    for product in products:
-        names.append(product.name)
-    return names
-
-
-def get_product_names(products: list[Product]) -> list[str]:
-    """После оптимизации: генератор списка."""
-    return [product.name for product in products]
-
-
-# --- 3. Сумма цен: вложенный цикл → sum() ---
-
-
-def sum_prices_slow(products: list[Product]) -> float:
-    """До оптимизации: ручной цикл."""
-    total = 0.0
-    for product in products:
-        total += product.price
-    return total
-
-
-def sum_prices(products: list[Product]) -> float:
-    """После оптимизации: встроенный sum()."""
-    return sum(product.price for product in products)
-
-
-# --- 4. Сортировка: O(n²) ручная → O(n log n) sorted() ---
-
-
-def sort_orders_manual(orders: list[Order]) -> list[Order]:
-    """Ручная пузырьковая сортировка по created_at: O(n²)."""
-    items = orders.copy()
-    n = len(items)
-    for i in range(n):
-        swapped = False
-        for j in range(n - i - 1):
-            if items[j].created_at > items[j + 1].created_at:
-                items[j], items[j + 1] = items[j + 1], items[j]
-                swapped = True
-        if not swapped:
-            break
-    return items
-
-
-def sort_orders(orders: list[Order]) -> list[Order]:
-    """Встроенная сортировка: O(n log n)."""
-    return sorted(orders, key=lambda x: x.created_at)
-
-
-# --- Тестовые данные ---
-
-
-def create_test_products(count: int = 1000) -> list[Product]:
-    """Создать список тестовых товаров."""
-    return [Product(i, f"Товар {i}", 1000 + i) for i in range(1, count + 1)]
-
-
-def create_test_orders(count: int = 1000) -> list[Order]:
-    """Создать список заказов с перемешанными датами."""
-    base = datetime(2024, 1, 1)
-    return [
-        Order(i, base + timedelta(minutes=(i * 37) % count), 1000.0 + i)
-        for i in range(1, count + 1)
-    ]
-
-
-def benchmark_search(products: list[Product], product_id: int) -> dict[str, float]:
-    """Сравнить время поиска в списке vs словаре."""
-    # Поиск в списке (много повторов, чтобы замер был стабильным)
-    iterations = 5_000
+def benchmark_search(products, product_id):
+    """Измерить производительность поиска в списке vs словаре"""
+    # Поиск в списке
     start_time = time.time()
-    result_list = None
-    for _ in range(iterations):
-        result_list = find_product_in_list(products, product_id)
+    result_list = find_product_in_list(products, product_id)
     time_list = time.time() - start_time
 
-    # Поиск в словаре
-    products_dict = create_products_catalog(products)
+    # Создание индекса
     start_time = time.time()
-    result_dict = None
-    for _ in range(iterations):
-        result_dict = products_dict.get(product_id)
+    products_dict = create_products_index(products)
+    time_index = time.time() - start_time
+
+    # Поиск в словаре
+    start_time = time.time()
+    result_dict = find_product_in_dict(products_dict, product_id)
     time_dict = time.time() - start_time
 
-    speedup = time_list / time_dict if time_dict > 0 else 0.0
+    # Общее время для словаря (создание + поиск)
+    time_dict_total = time_index + time_dict
+
+    # Сравнение
+    speedup = time_list / time_dict if time_dict > 0 else 0
+
+    print(f"Поиск в списке: {time_list:.6f} секунд")
+    print(f"Создание индекса: {time_index:.6f} секунд")
+    print(f"Поиск в словаре: {time_dict:.6f} секунд")
+    print(f"Общее время (словарь): {time_dict_total:.6f} секунд")
+    print(f"Ускорение поиска: {speedup:.2f}x")
+    print(f"Результаты совпадают: {result_list == result_dict}")
+
     return {
         "time_list": time_list,
         "time_dict": time_dict,
+        "time_index": time_index,
         "speedup": speedup,
-        "results_match": result_list is result_dict,
+        "result": result_dict,
     }
-
-
-def benchmark_optimizations() -> dict[str, dict[str, Any]]:
-    """Измерить производительность оптимизированных функций."""
-    results: dict[str, dict[str, Any]] = {}
-
-    # --- Тест 1: поиск товара (O(n) → O(1)) ---
-    products = create_test_products(1000)
-    product_id = 1000  # худший случай для линейного поиска
-
-    start_time = time.time()
-    for _ in range(5_000):
-        find_product_in_list(products, product_id)
-    time_before = time.time() - start_time
-
-    products_dict = create_products_catalog(products)
-    start_time = time.time()
-    for _ in range(5_000):
-        find_product(products_dict, product_id)
-    time_after = time.time() - start_time
-
-    results["product_search"] = {
-        "time_before": time_before,
-        "time_after": time_after,
-        "speedup": time_before / time_after if time_after > 0 else 0.0,
-    }
-
-    # --- Тест 2: имена товаров (append → comprehension) ---
-    start_time = time.time()
-    for _ in range(2_000):
-        get_product_names_slow(products)
-    time_before = time.time() - start_time
-
-    start_time = time.time()
-    for _ in range(2_000):
-        get_product_names(products)
-    time_after = time.time() - start_time
-
-    results["product_names"] = {
-        "time_before": time_before,
-        "time_after": time_after,
-        "speedup": time_before / time_after if time_after > 0 else 0.0,
-    }
-
-    # --- Тест 3: сумма цен (цикл → sum) ---
-    start_time = time.time()
-    for _ in range(2_000):
-        sum_prices_slow(products)
-    time_before = time.time() - start_time
-
-    start_time = time.time()
-    for _ in range(2_000):
-        sum_prices(products)
-    time_after = time.time() - start_time
-
-    results["sum_prices"] = {
-        "time_before": time_before,
-        "time_after": time_after,
-        "speedup": time_before / time_after if time_after > 0 else 0.0,
-    }
-
-    # --- Тест 4: сортировка заказов (O(n²) → O(n log n)) ---
-    orders = create_test_orders(1000)
-
-    start_time = time.time()
-    sorted_manual = sort_orders_manual(orders)
-    time_before = time.time() - start_time
-
-    start_time = time.time()
-    sorted_fast = sort_orders(orders)
-    time_after = time.time() - start_time
-
-    results["sort_orders"] = {
-        "time_before": time_before,
-        "time_after": time_after,
-        "speedup": time_before / time_after if time_after > 0 else 0.0,
-        "order_match": [o.id for o in sorted_manual] == [o.id for o in sorted_fast],
-    }
-
-    # Вывести результаты
-    print("Результаты оптимизации:")
-    for func_name, metrics in results.items():
-        print(f"{func_name}:")
-        print(f"  До: {metrics['time_before']:.6f} сек")
-        print(f"  После: {metrics['time_after']:.6f} сек")
-        print(f"  Ускорение: {metrics['speedup']:.2f}x")
-        if "order_match" in metrics:
-            print(f"  Порядок совпадает: {metrics['order_match']}")
-
-    return results
-
-
-if __name__ == "__main__":
-    benchmark_optimizations()
