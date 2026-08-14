@@ -1,7 +1,7 @@
 from exceptions import ValidationError
 from dataclasses import dataclass
 from metaclasses import ModelMeta
-from descriptors import PositiveNumber
+from descriptors import PositiveNumber, CachedProperty
 
 class Product(metaclass=ModelMeta):
     price = PositiveNumber("price")
@@ -28,22 +28,10 @@ class Product(metaclass=ModelMeta):
             raise ValidationError("Цена не может быть отрицательной")
         self.price = price
 
-    def apply_discount(self, price):
-        pass
-
-    def check_stock(self):
-        pass
-
-    def update_stock(self):
-        pass
-
-    def get_total_price(self):
-        #другой комментарий
-        pass
-    def calculate_shipping(self):
-        pass
-    def get_category(self):
-        pass
+    @CachedProperty
+    def total_value(self):
+        print(f"Вычисление total_value для {self.name}")
+        return self.price * self.quantity
     
     @classmethod
     def from_dict(cls, data):
@@ -54,17 +42,11 @@ class Product(metaclass=ModelMeta):
         return price * (1 - discount_percent / 100)
 
     
-
 # Тестирование
 product = Product("Ноутбук", 1000, 10)
-print(product.price) # 1000
 
-try:
-    product.price = -100 # Ошибка: ValueError
-except ValueError as e:
-    print(f"Ошибка: {e}")
+# Первое обращение - вычисление
+print(product.total_value)  # Вычисление... 10000
 
-try:
-    product.quantity = -5 # Ошибка: ValueError
-except ValueError as e:
-    print(f"Ошибка: {e}")
+# Второе обращение - из кэша
+print(product.total_value)  # 10000 (без вычисления)

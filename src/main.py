@@ -1186,36 +1186,73 @@
 # print(product.price)
 
 
-from models.metaclasses import ModelMeta
+# from models.metaclasses import ModelMeta
 
-class Model(metaclass=ModelMeta):
-    pass
+# class Model(metaclass=ModelMeta):
+#     pass
 
-class Product(Model):
-    def __init__(self, name, price, quantity=0):
-        self.name = name
-        self.price = price
-        self.quantity = quantity
+# class Product(Model):
+#     def __init__(self, name, price, quantity=0):
+#         self.name = name
+#         self.price = price
+#         self.quantity = quantity
 
-class Order(Model):
-    def __init__(self, user, products):
-        self.user = user
-        self.products = products
-
-
-class User(Model):
-    def __init__(self, login):
-        self.login = login
+# class Order(Model):
+#     def __init__(self, user, products):
+#         self.user = user
+#         self.products = products
 
 
-for model_name in sorted(ModelMeta._registry):
-    print(model_name)
-product = Product("Ноутбук", 1000, 10)
-order = Order("user1", [product])
-user = User("user1")
-print("Всего моделей:", len(ModelMeta._registry))
-print("Order зарегистрирован:", "Order" in ModelMeta._registry)
-print("Model в реестре:", "Model" in ModelMeta._registry)
-print(product.to_dict())
-print(order.to_dict())
-print(user.to_dict())
+# class User(Model):
+#     def __init__(self, login):
+#         self.login = login
+
+
+# for model_name in sorted(ModelMeta._registry):
+#     print(model_name)
+# product = Product("Ноутбук", 1000, 10)
+# order = Order("user1", [product])
+# user = User("user1")
+# print("Всего моделей:", len(ModelMeta._registry))
+# print("Order зарегистрирован:", "Order" in ModelMeta._registry)
+# print("Model в реестре:", "Model" in ModelMeta._registry)
+# print(product.to_dict())
+# print(order.to_dict())
+# print(user.to_dict())
+
+# В файле src/main.py
+class OneOf:
+    """Дескриптор: разрешает только значения из заданного набора"""
+
+    def __init__(self, *allowed):
+        self.allowed = set(allowed)
+
+    def __set_name__(self, owner, name):
+        self.storage_name = "_" + name
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        return getattr(instance, self.storage_name)
+
+    def __set__(self, instance, value):
+        if value not in self.allowed:
+            raise ValueError(f"Значение {self.storage_name} должно быть одним из {self.allowed}")
+        setattr(instance, self.storage_name, value)
+
+
+class Order:
+    status = OneOf("new", "paid", "shipped", "delivered")
+    def __init__(self, order_id, status):
+        self.order_id = order_id
+        self.status = status
+
+order = Order(1, "new")
+print(order.status)
+order.status = "paid"
+print(order.status)
+try:
+    order.status = "invalid"
+except ValueError as e:
+    print(e)
+print(order.status)
