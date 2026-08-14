@@ -1,11 +1,12 @@
 from exceptions import ValidationError
 from dataclasses import dataclass
+from metaclasses import ModelMeta
 
-@dataclass
-class Product:
-    name: str
-    price: float
-    quantity: int
+class Product(metaclass=ModelMeta):
+    def __init__(self, name, price, quantity):
+        self.name = name
+        self.price = price
+        self.quantity = quantity
 
     def __post_init__(self):
         """Валидация после инициализации"""
@@ -69,3 +70,4 @@ product2 = Product.from_dict(data)
 # Статический метод
 discounted_price = Product.calculate_discount(1000, 10)  # 900
 print(f"Цена со скидкой: {discounted_price}")
+
