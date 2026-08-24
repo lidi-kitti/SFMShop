@@ -3,14 +3,17 @@ from contextlib import contextmanager
 
 import psycopg2
 from psycopg2 import Error
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def connect_to_db():
     """Подключение к базе данных PostgreSQL"""
     return psycopg2.connect(
-        host="localhost",
-        database="sfmshop",
-        user="postgres",
+        host=os.environ.get("DB_HOST", "localhost"),
+        database=os.environ.get("DB_NAME", "sfmshop"),
+        user=os.environ.get("DB_USER", "postgres"),
         password=os.environ.get("DB_PASSWORD", "password")
         )
 

@@ -1,7 +1,7 @@
 from datetime import datetime
+from metaclasses import ModelMeta
 
-
-class Order:
+class Order(metaclass=ModelMeta):
     """Класс только для хранения данных заказа (SRP)"""
 
     def __init__(self, user, products, order_id=None, created_at=None):
@@ -23,9 +23,11 @@ class Order:
         return OrderCalculator.calculate_total(self)
 
     def __lt__(self, other):
-        """Сравнение по дате (<)"""
+        """Сравнение по дате (<). Без даты — по order_id."""
         if not isinstance(other, Order):
             return NotImplemented
+        if self.created_at is None or other.created_at is None:
+            return (self.order_id or 0) < (other.order_id or 0)
         return self.created_at < other.created_at
 
     def __eq__(self, other):
@@ -38,6 +40,29 @@ class Order:
         """Итерация по товарам в заказе"""
         return iter(self.products)
 
+    def __len__(self):
+        """Количество товаров в заказе"""
+        return len(self.products)
+
+    def __contains__(self, item):
+        """Проверка наличия товара в заказе (по объекту или имени)"""
+        if isinstance(item, str):
+            return any(
+                getattr(product, "name", product) == item
+                for product in self.products
+            )
+        return item in self.products
+
+    def __getitem__(self, index):
+        """Получение товара по индексу"""
+        return self.products[index]
+
+    def __add__(self, other):
+        """Сложение заказов"""
+        if not isinstance(other, Order):
+            return NotImplemented
+        return Order(self.user, self.products + other.products)
+    
 
 class OrderCalculator:
     """Класс для расчетов заказа (SRP)"""
@@ -71,3 +96,12 @@ class OrderValidator:
             if product.quantity <= 0:
                 raise ValueError("Количество товара должно быть положительным")
         return True
+
+# Использование
+order1 = Order(1, ["Ноутбук", "Мышь"])
+order2 = Order(2, ["Клавиатура"])
+
+print(len(order1))  # 2
+print("Ноутбук" in order1)  # True
+order3 = order1 + order2  # Объединение заказов
+sorted_orders = sorted([order2, order1])  # Сортировка через __lt__

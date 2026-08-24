@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-
+from descriptors import PositiveNumber, CachedProperty
+from metaclasses import ModelMeta
 
 class DiscountStrategy(ABC):
     """Абстрактный класс для стратегий скидок (OCP)"""
@@ -30,7 +31,7 @@ class FixedDiscount(DiscountStrategy):
         return max(0, price - self.amount)
 
 
-class Product:
+class Product(metaclass=ModelMeta):
     """Доменная модель товара SFMShop (канон ba7, урок 40 «Рефакторинг»).
 
     После рефакторинга класс хранит данные товара и умеет считать
@@ -40,16 +41,13 @@ class Product:
     __str__/__repr__/__lt__/__eq__ накоплены с урока 17 «Магические
     методы» и сохранены при рефакторинге.
     """
-
+    price = PositiveNumber("_price")
+    quantity = PositiveNumber("_quantity")
     def __init__(self, name, price, quantity=0):
-        if price < 0:
-            raise ValueError("Цена не может быть отрицательной")
-        if quantity < 0:
-            raise ValueError("Количество не может быть отрицательным")
         self.name = name
         self.price = price
         self.quantity = quantity
-
+        
     def get_total_price(self):
         """Общая стоимость партии товара (из урока 15)"""
         return self.price * self.quantity
@@ -82,3 +80,15 @@ class Product:
         if not isinstance(other, Product):
             return NotImplemented
         return self.price < other.price
+
+    @CachedProperty
+    def total_price(self):
+        """Общая стоимость партии товара (кеширование)"""
+        print("Вычисление total_price")
+        return self.price * self.quantity
+
+product = Product("Ноутбук", 1000, 10)
+print(product.total_price)  # Вычисление... 10000
+print(product.total_price)  # 10000 (из кэша)
+
+print(product.to_dict())

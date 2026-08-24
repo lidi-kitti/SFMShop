@@ -638,6 +638,10 @@ print(f"Найдены цены: {prices}")
 # ==================
 
 # Менторское задание: классы Product, User, Order используются вместе
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "models"))
 from models.product import Product
 from models.user import User
 from models.order import Order
@@ -1463,3 +1467,94 @@ shipping_orders = [
 for name, weight, strategy in shipping_orders:
     cost = ShippingCalculator.calculate(weight, strategy)
     print(f"{name}: {cost:.2f} руб.")
+
+
+# ==================
+# ДЕМОНСТРАЦИЯ ПРОДВИНУТЫХ КОНЦЕПЦИЙ ООП
+# ==================
+
+from models.order_factory import OrderFactory
+from models.delivery_stragedy import StandardDelivery
+from models.payment import CardPayment
+from models.product import Product
+from models.user import User
+
+
+def process_advanced_order_system():
+    """Демонстрация всех продвинутых концепций ООП"""
+
+    user = User("Иван Иванов", "ivan@test.ru")
+    items = [
+        Product("Ноутбук", 1000, 10),
+        Product("Мышь", 500, 5),
+    ]
+
+    # 1. Factory для создания заказов
+    order = OrderFactory.create_order(1, items, user)
+
+    # 2. Strategy для расчета доставки
+    delivery = StandardDelivery()
+    delivery_cost = delivery.calculate_cost(5.0)
+
+    # 3. Полиморфизм для платежей
+    payment = CardPayment(1000)
+    payment.process()
+
+    # 4. Метакласс для сериализации
+    order_json = order.to_dict()
+
+    # 5. Дескрипторы для валидации
+    product = Product("Ноутбук", 1000, 10)  # Автоматическая валидация
+
+    # 6. Миксины для логирования
+    payment.log("Платеж обработан")
+
+    # 7. Магические методы
+    print(len(order))  # Количество товаров
+    print("Ноутбук" in order)  # Проверка наличия
+
+    return {
+        "order": order_json,
+        "delivery_cost": delivery_cost,
+        "product": product.to_dict()
+    }
+
+
+print(process_advanced_order_system())
+
+# ==================
+# УРОК 41: Доступ к базе данных PostgreSQL
+# ==================
+
+# Практика: Задание 2 - Схема SFMShop и отчёт по выручке (sqlite3)
+import sqlite3
+
+
+def setup_database():
+    conn = sqlite3.connect(":memory:")
+    conn.execute("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT)")
+    conn.execute("CREATE TABLE products (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, price REAL, quantity INTEGER)")
+    conn.execute("CREATE TABLE orders (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, product_id INTEGER, quantity INTEGER)")
+    conn.commit()
+    return conn
+
+
+def seed(conn):
+    conn.execute("INSERT INTO users (name, email) VALUES (?, ?)", ("John Doe", "john@example.com"))
+    conn.execute("INSERT INTO products (name, price, quantity) VALUES (?, ?, ?)", ("Product 1", 100, 10))
+    conn.execute("INSERT INTO orders (user_id, product_id, quantity) VALUES (?, ?, ?)", (1, 1, 1))
+    conn.commit()
+
+
+def report(conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT users.name, SUM(products.price * orders.quantity) AS total FROM users JOIN orders ON users.id = orders.user_id JOIN products ON orders.product_id = products.id GROUP BY users.name")
+    orders = cursor.fetchall()
+    for user, total in orders:
+        print(f"{user}: {total:.2f} руб.")
+
+if __name__ == "__main__":
+    conn = setup_database()
+    seed(conn)
+    report(conn)
+    conn.close()

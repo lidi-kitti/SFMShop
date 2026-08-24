@@ -1,4 +1,9 @@
-class User:
+from metaclasses import ModelMeta
+from descriptors import EmailDescriptor, AgeDescriptor
+
+class User(metaclass=ModelMeta):
+    email = EmailDescriptor()
+    age = AgeDescriptor()
 
     def __init__(self, name, email):
         self.name = name
