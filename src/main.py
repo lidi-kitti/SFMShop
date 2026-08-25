@@ -1558,3 +1558,105 @@ if __name__ == "__main__":
     seed(conn)
     report(conn)
     conn.close()
+
+# ==================
+# УРОК 42: Транзакции в PostgreSQL
+# ==================
+
+# Практика: Задание 2 - Перевод денег с откатом транзакции
+# def setup_db():
+#     """Создаёт in-memory БД SFMShop с балансами пользователей."""
+#     conn = sqlite3.connect(":memory:")
+#     conn.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, balance INTEGER)")
+#     conn.executemany(
+#         "INSERT INTO users (id, name, balance) VALUES (?, ?, ?)",
+#         [(1, "Анна", 5000), (2, "Борис", 1000), (3, "Вера", 200)],
+#     )
+#     conn.commit()
+#     return conn
+
+
+# def transfer_money(conn, from_id, to_id, amount):
+#     """Перевод денег между пользователями в одной транзакции."""
+#     try:
+#         cur = conn.cursor()
+#         cur.execute("UPDATE users SET balance = balance - ? WHERE id = ?", (amount, from_id))
+#         cur.execute("UPDATE users SET balance = balance + ? WHERE id = ?", (amount, to_id))
+#         cur.execute("SELECT balance FROM users WHERE id = ?", (from_id,))
+#         result = cur.fetchone()
+#         if result[0] < 0:
+#             raise sqlite3.Error("Недостаточно средств")
+#         conn.commit()
+#     except sqlite3.Error as e:
+#         conn.rollback()
+#         raise e
+
+# def balance(conn, user_id):
+#     return conn.execute("SELECT balance FROM users WHERE id = ?", (user_id,)).fetchone()[0]
+
+
+# conn = setup_db()
+# # Успешный перевод: Анна -> Борис 1500
+# transfer_money(conn, 1, 2, 1500)
+# print(balance(conn, 1))
+# print(balance(conn, 2))
+
+# # Откат: Вера пытается перевести 500, но у неё только 200
+# transfer_money(conn, 3, 2, 500)
+# print(balance(conn, 3))
+# print(balance(conn, 2))
+
+# conn.close()
+
+# ==================
+# УРОК 43: Изоляция транзакций в PostgreSQL
+# ==================
+
+def setup_db():
+    """In-memory БД заказов SFMShop с тремя заказами."""
+    conn = sqlite3.connect(":memory:")
+    conn.execute("CREATE TABLE orders (id INTEGER PRIMARY KEY, total REAL)")
+    conn.executemany(
+        "INSERT INTO orders (total) VALUES (?)",
+        [(1500.0,), (2300.0,), (900.0,)],
+    )
+    conn.commit()
+    return conn
+
+def naive_report(conn, on_between_reads):
+    """Наивный отчёт без изоляции: сумму и количество читаем
+    двумя отдельными запросами. Между ними проходит чужая
+    транзакция (on_between_reads) - цифры расходятся."""
+    total = conn.execute("SELECT SUM(total) FROM orders").fetchone()[0]
+    on_between_reads(conn)
+    count = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+    return {"total": total, "count": count}
+
+
+def snapshot_report(conn, on_between_reads):
+    """Согласованный отчёт (имитация REPEATABLE READ):
+    зафиксируй ОДИН снимок заказов и посчитай по нему обе метрики."""
+    snapshot = conn.execute("SELECT total FROM orders").fetchall()
+    on_between_reads(conn)  # вставка происходит, но снимок уже зафиксирован
+    total = sum(row[0] for row in snapshot)
+    count = len(snapshot)
+    return {"total": total, "count": count}
+
+
+def add_order(conn):
+    conn.execute("INSERT INTO orders (total) VALUES (5000.0)")
+    conn.commit()
+
+
+# --- Демонстрация ---
+conn = setup_db()
+r1 = naive_report(conn, add_order)
+print(f"Наивный отчёт: сумма={r1['total']}, заказов={r1['count']}")
+print(f"  расхождение: сумма по 3 заказам, а count={r1['count']} -> цифры не сходятся")
+
+conn = setup_db()
+r2 = snapshot_report(conn, add_order)
+print(f"Снимок-отчёт: сумма={r2['total']}, заказов={r2['count']}")
+print(f"  среднее по заказу: {round(r2['total'] / r2['count'], 2)}")
+print(f"  согласован: {r2['total'] == 1500.0 + 2300.0 + 900.0 and r2['count'] == 3}")
+
