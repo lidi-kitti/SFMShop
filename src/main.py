@@ -1724,3 +1724,4 @@ print("После заказа 1:", snapshot(conn))
 order_id = place_order(conn, user_id=1, product_id=5, quantity=3, total=300)
 print("Заказ 2 (id):", order_id)
 print("После заказа 2:", snapshot(conn))
+
