@@ -1806,4 +1806,47 @@ def main():
 if __name__ == "__main__":
     main()
 
-# дальше: класс Order, наполнение БД, get_user_with_orders, main()
+# ==================
+# УРОК 46: Кэширование в PostgreSQL
+# ==================
+
+# Практика: Задание 2 - Кэширование товаров в Redis
+
+import json
+import time
+from database.queries import get_all_products
+
+
+class SimpleCache:
+    """Учебная модель Redis: key-value хранилище в памяти с TTL."""
+
+    def __init__(self):
+        self._store = {}  # key -> (value, expire_at)
+
+    def setex(self, key, ttl_seconds, value):
+        self._store[key] = (value, time.time() + ttl_seconds)
+
+    def get(self, key):
+        now = time.time()
+        if key in self._store:
+            value, expire_at = self._store[key]
+            if expire_at > now:
+                return value
+            else:
+                del self._store[key]
+        return None
+
+    def delete(self, key):
+        if key in self._store:
+            del self._store[key]
+
+
+def get_cached_products():
+    """Сначала кэш, при промахе — БД и запись в кэш."""
+    cache = SimpleCache()
+    cached = cache.get("products:all")
+    if cached:
+        return json.loads(cached)
+    products = get_all_products()
+    cache.setex("products:all", 3600, json.dumps(products))
+    return products

@@ -8,17 +8,14 @@ from sqlalchemy.orm import joinedload
 
 
 def _setup_import_paths():
-    """Добавляет src, src/models и src/database в sys.path для запуска файла из любой оболочки."""
-    src_root = Path(__file__).resolve().parent.parent
-    db_dir = Path(__file__).resolve().parent
-    for path in (src_root / "models", src_root, db_dir):
-        path_str = str(path)
-        if path_str not in sys.path:
-            sys.path.insert(0, path_str)
+    """Добавляет src в sys.path, чтобы пакет database был виден при любом запуске."""
+    src_root = str(Path(__file__).resolve().parent.parent)
+    if src_root not in sys.path:
+        sys.path.insert(0, src_root)
 
 
 _setup_import_paths()
-from models import Order, OrderItem, Product, User, engine, get_session
+from database.models import Order, OrderItem, Product, User, engine, get_session
 
 
 @contextmanager
