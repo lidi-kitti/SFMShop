@@ -30,6 +30,8 @@ class Product(Base):
     quantity: Mapped[int] = mapped_column(default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+    order_items: Mapped[list["OrderItem"]] = relationship(back_populates="product")
+
 
 class Order(Base):
     """Модель заказа"""
@@ -42,6 +44,21 @@ class Order(Base):
 
     # Связь с пользователем
     user: Mapped["User"] = relationship(back_populates="orders")
+    items: Mapped[list["OrderItem"]] = relationship(back_populates="order")
+
+
+class OrderItem(Base):
+    """Позиция заказа"""
+    __tablename__ = "order_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"))
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
+    quantity: Mapped[int]
+    price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
+
+    order: Mapped["Order"] = relationship(back_populates="items")
+    product: Mapped["Product"] = relationship(back_populates="order_items")
 
 # Настройка подключения
 import os
