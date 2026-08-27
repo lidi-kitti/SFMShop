@@ -217,3 +217,16 @@ def get_all_products():
             }
             for row in rows
         ]
+
+def get_product_by_id(product_id):
+    with _session_scope() as session:
+        stmt = select(Product.id, Product.name, Product.price, Product.quantity).where(Product.id == product_id)
+        row = session.execute(stmt).mappings().one_or_none()
+        if row:
+            return {
+                "id": row["id"],
+                "name": row["name"],
+                "price": float(row["price"]),
+                "quantity": row["quantity"],
+            }
+        return None
