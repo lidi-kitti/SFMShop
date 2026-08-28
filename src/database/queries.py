@@ -231,3 +231,4 @@ def get_product_by_id(product_id):
                 "quantity": row["quantity"],
             }
         return None
+
