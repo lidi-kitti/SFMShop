@@ -1,87 +1,88 @@
-# Файл src/services/cache_service.py
 import json
-import sys
-from pathlib import Path
+import os
 import uuid
+
 import redis
+from dotenv import load_dotenv
 
-_src_root = Path(__file__).resolve().parent.parent
-if str(_src_root) not in sys.path:
-    sys.path.insert(0, str(_src_root))
+load_dotenv()
 
-from database.queries import get_all_products, get_product_by_id
 
-redis_client = redis.Redis(
-    host="localhost",
-    port=6379,
-    db=0,
-    decode_responses=True,
-    protocol=2,
-)
+class CacheService:
+    """Кэш Redis: каталог, пользователи и сессии. Промах обрабатывает вызывающий код."""
 
-def create_user_session(user_id):
-    """Создание сессии пользователя"""
-    session_id = str(uuid.uuid4())
-    redis_client.setex(f"session:{session_id}", 86400, json.dumps({"user_id": user_id}))
-    return session_id
+    PRODUCTS_KEY = "products:all"
+    USERS_KEY = "users:all"
+    TTL = 3600
+    SESSION_TTL = 86400
 
-def get_user_session(session_id):
-    """Получение сессии пользователя"""
-    session = redis_client.get(f"session:{session_id}")
-    if session:
-        return json.loads(session)
-    return None
+    def __init__(self, host=None, port=None, db=0):
+        self.client = redis.Redis(
+            host=host or os.getenv("REDIS_HOST", "localhost"),
+            port=int(port or os.getenv("REDIS_PORT", 6379)),
+            db=db,
+            decode_responses=True,
+            protocol=2,
+        )
 
-def invalidate_user_session(session_id):
-    """Инвалидация сессии пользователя"""
-    redis_client.delete(f"session:{session_id}")
+    def _get_json(self, key):
+        cached = self.client.get(key)
+        return json.loads(cached) if cached else None
 
-def get_cached_products():
-    """Получение товаров с кэшированием"""
-    cache_key = "products:all"
-    cached = redis_client.get(cache_key)
-    if cached:
-        return json.loads(cached)
-    products = get_all_products()
-    redis_client.setex(cache_key, 3600, json.dumps(products))
-    return products
+    def _set_json(self, key, value, ttl=None):
+        self.client.setex(key, ttl or self.TTL, json.dumps(value))
 
-def get_cached_product(product_id):
-    """Получение товара по ID с кэшированием"""
-    cache_key = f"product:{product_id}"
-    cached = redis_client.get(cache_key)
-    if cached:
-        return json.loads(cached)
-    product = get_product_by_id(product_id)
-    if product:
-        redis_client.setex(cache_key, 3600, json.dumps(product))
-    return product
+    def get_products(self):
+        return self._get_json(self.PRODUCTS_KEY)
 
-def invalidate_products_cache():
-    """Инвалидация кэша товаров"""
-    redis_client.delete("products:all")
-    print("Кэш товаров очищен")
+    def set_products(self, products_data):
+        self._set_json(self.PRODUCTS_KEY, products_data)
 
-def invalidate_product_cache(product_id):
-    """Инвалидация кэша товара"""
-    redis_client.delete(f"product:{product_id}")
-    print(f"Кэш товара {product_id} очищен")
+    def invalidate_products(self):
+        self.client.delete(self.PRODUCTS_KEY)
 
-# Тестирование
+    def get_product(self, product_id):
+        return self._get_json(f"product:{product_id}")
+
+    def set_product(self, product_id, product_data):
+        self._set_json(f"product:{product_id}", product_data)
+
+    def invalidate_product(self, product_id):
+        self.client.delete(f"product:{product_id}")
+
+    def get_users(self):
+        return self._get_json(self.USERS_KEY)
+
+    def set_users(self, users_data):
+        self._set_json(self.USERS_KEY, users_data)
+
+    def invalidate_users(self):
+        self.client.delete(self.USERS_KEY)
+
+    def get_user(self, user_id):
+        return self._get_json(f"user:{user_id}")
+
+    def set_user(self, user_id, user_data):
+        self._set_json(f"user:{user_id}", user_data)
+
+    def invalidate_user(self, user_id):
+        self.client.delete(f"user:{user_id}")
+
+    def create_user_session(self, user_id):
+        session_id = str(uuid.uuid4())
+        self._set_json(f"session:{session_id}", {"user_id": user_id}, self.SESSION_TTL)
+        return session_id
+
+    def get_user_session(self, session_id):
+        return self._get_json(f"session:{session_id}")
+
+    def invalidate_user_session(self, session_id):
+        self.client.delete(f"session:{session_id}")
+
+
 if __name__ == "__main__":
-    # Первый запрос - из БД
-    products1 = get_cached_products()
+    cache = CacheService()
 
-    # Второй запрос - из кэша
-    products2 = get_cached_products()
-
-    # Инвалидация кэша# Тест кэширования товара
-    product = get_cached_product(1)
-    print(f"Товар: {product}")
-    
-    # Тест сессий
-    session_token = create_user_session(user_id=1)
-    print(f"Сессия создана: {session_token}")
-    
-    session = get_user_session(session_token)
-    print(f"Сессия: {session}")
+    session_id = cache.create_user_session(user_id=1)
+    print(f"Сессия создана: {session_id}")
+    print(f"Сессия: {cache.get_user_session(session_id)}")
