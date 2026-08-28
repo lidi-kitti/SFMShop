@@ -8,25 +8,42 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def connect_to_db():
-    """Подключение к базе данных PostgreSQL"""
-    return psycopg2.connect(
-        host=os.environ.get("DB_HOST", "localhost"),
-        database=os.environ.get("DB_NAME", "sfmshop"),
-        user=os.environ.get("DB_USER", "postgres"),
-        password=os.environ.get("DB_PASSWORD", "password")
-        )
+# Основная БД (для записи)
+PRIMARY_DB = {
+    "host": os.getenv("DB_PRIMARY_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", 5432)),
+    "database": os.getenv("DB_NAME", "sfmshop"),
+    "user": os.getenv("DB_USER", "postgres"),
+    "password": os.getenv("DB_PASSWORD")
+    }
+
+# Реплика (для чтения)
+REPLICA_DB = {
+    "host": os.getenv("DB_REPLICA_HOST", "localhost"),
+    "port": int(os.getenv("DB_REPLICA_PORT", 5433)),
+    "database": os.getenv("DB_NAME", "sfmshop"),
+    "user": os.getenv("DB_USER", "postgres"),
+    "password": os.getenv("DB_PASSWORD")
+    }
 
 
 @contextmanager
-def get_connection():
-    """Контекстный менеджер соединения: commit при успехе, rollback при ошибке."""
-    conn = connect_to_db()
+def get_connection(read_only=False):
+    """Получить подключение к БД (основная или реплика)"""
+    if read_only:
+        # Чтение из реплики
+        conn = psycopg2.connect(**REPLICA_DB)
+    else:
+        # Запись в основную БД
+        conn = psycopg2.connect(**PRIMARY_DB)
+
     try:
         yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
+        if not read_only:
+            conn.commit()
+    except Exception as e:
+        if not read_only:
+            conn.rollback()
         raise
     finally:
         conn.close()
@@ -132,24 +149,15 @@ def get_user_orders(conn, user_id):
 
 
 def main():
-    # Подключение к БД
-    conn = connect_to_db()
-
-    try:
-        # Добавить товар
+    with get_connection() as conn:
         add_product(conn, "Ноутбук", 50000.00, 10)
+        update_product_price(conn, 1, 45000.00)
 
-        # Получить все товары
+    with get_connection(read_only=True) as conn:
         products = get_all_products(conn)
         print("Все товары:")
         for product in products:
             print(product)
-
-        # Обновить цену
-        update_product_price(conn, 1, 45000.00)
-
-    finally:
-        conn.close()
 
 
 if __name__ == "__main__":

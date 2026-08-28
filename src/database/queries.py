@@ -19,21 +19,22 @@ from database.models import Order, OrderItem, Product, User, engine, get_session
 
 
 @contextmanager
-def _session_scope(commit=False):
-    session = get_session()
+def _session_scope(commit=False, read_only=False):
+    session = get_session(read_only=read_only)
     try:
         yield session
-        if commit:
+        if commit and not read_only:
             session.commit()
     except Exception:
-        session.rollback()
+        if not read_only:
+            session.rollback()
         raise
     finally:
         session.close()
 
 
 def get_order_statistics():
-    with _session_scope() as session:
+    with _session_scope(read_only=True) as session:
         stmt = (
             select(
                 Order.user_id,
@@ -47,7 +48,7 @@ def get_order_statistics():
 
 
 def get_user_order_history(user_id):
-    with _session_scope() as session:
+    with _session_scope(read_only=True) as session:
         stmt = (
             select(
                 Order.id.label("order_id"),
@@ -66,7 +67,7 @@ def get_user_order_history(user_id):
 
 def get_user_orders(user_id):
     """Заказы пользователя через relationship User.orders."""
-    with _session_scope() as session:
+    with _session_scope(read_only=True) as session:
         user = session.execute(
             select(User).where(User.id == user_id)
         ).scalar_one_or_none()
@@ -77,14 +78,14 @@ def get_user_orders(user_id):
 
 def get_all_orders_with_users():
     """Все заказы с пользователями одним запросом (без N+1)."""
-    with _session_scope() as session:
+    with _session_scope(read_only=True) as session:
         stmt = select(Order).options(joinedload(Order.user))
         return session.execute(stmt).unique().scalars().all()
 
 
 def get_top_products(limit=5):
     """Топ товаров по количеству продаж."""
-    with _session_scope() as session:
+    with _session_scope(read_only=True) as session:
         try:
             stmt = (
                 select(
@@ -105,7 +106,7 @@ def get_top_products(limit=5):
 
 def get_orders_with_products(user_id):
     """Заказы пользователя с товарами."""
-    with _session_scope() as session:
+    with _session_scope(read_only=True) as session:
         try:
             stmt = (
                 select(Order.id, Product.name, OrderItem.quantity, Product.price)
@@ -136,7 +137,7 @@ def create_order(user_id, total):
 
 
 def generate_sales_report(start_date):
-    with _session_scope() as session:
+    with _session_scope(read_only=True) as session:
         try:
             stmt = select(
                 func.coalesce(func.sum(Order.total), 0),
@@ -154,7 +155,7 @@ def generate_sales_report(start_date):
 
 
 def calculate_total_revenue(start_date, end_date):
-    with _session_scope() as session:
+    with _session_scope(read_only=True) as session:
         stmt = select(
             func.coalesce(func.sum(Order.total), 0),
             func.count(Order.id),
@@ -205,7 +206,7 @@ def measure_index_performance():
             print(f"  Ускорение: {time_without_index / time_with_index:.2f}x")
 
 def get_all_products():
-    with _session_scope() as session:
+    with _session_scope(read_only=True) as session:
         stmt = select(Product.id, Product.name, Product.price, Product.quantity)
         rows = session.execute(stmt).mappings().all()
         return [
@@ -219,7 +220,7 @@ def get_all_products():
         ]
 
 def get_product_by_id(product_id):
-    with _session_scope() as session:
+    with _session_scope(read_only=True) as session:
         stmt = select(Product.id, Product.name, Product.price, Product.quantity).where(Product.id == product_id)
         row = session.execute(stmt).mappings().one_or_none()
         if row:

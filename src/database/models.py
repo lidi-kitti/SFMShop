@@ -60,7 +60,7 @@ class OrderItem(Base):
     order: Mapped["Order"] = relationship(back_populates="items")
     product: Mapped["Product"] = relationship(back_populates="order_items")
 
-# Настройка подключения
+# Настройка подключения: запись — primary, чтение — replica
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
@@ -68,14 +68,34 @@ from sqlalchemy.orm import sessionmaker
 
 load_dotenv()
 
-engine = create_engine(
-    f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@"
-    f"{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
+
+def _database_url(host, port):
+    return (
+        f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@"
+        f"{host}:{port}/{os.getenv('DB_NAME', 'sfmshop')}"
     )
 
-SessionLocal = sessionmaker(bind=engine)
+
+primary_engine = create_engine(
+    _database_url(
+        os.getenv("DB_PRIMARY_HOST", "localhost"),
+        os.getenv("DB_PORT", "5432"),
+    )
+)
+replica_engine = create_engine(
+    _database_url(
+        os.getenv("DB_REPLICA_HOST", "localhost"),
+        os.getenv("DB_REPLICA_PORT", "5433"),
+    )
+)
+
+engine = primary_engine
+PrimarySession = sessionmaker(bind=primary_engine)
+ReplicaSession = sessionmaker(bind=replica_engine)
 
 
-def get_session():
-    """Получить сессию БД"""
-    return SessionLocal()
+def get_session(read_only=False):
+    """Сессия к основной БД или к реплике для чтения."""
+    if read_only:
+        return ReplicaSession()
+    return PrimarySession()
