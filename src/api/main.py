@@ -199,6 +199,83 @@ def create_order(order: OrderCreate, db=Depends(get_db)):
             for item in new_order.items
         ],
     }
+from fastapi import FastAPI, Depends
+import asyncio
+import asyncpg
+import httpx
+import redis.asyncio as aioredis
+import json
+
+http_client: httpx.AsyncClient | None = None
+# Глобальный Redis-клиент (инициализируется при старте)
+redis_client: aioredis.Redis | None = None
+
+async def get_db_async():
+    conn = await asyncpg.connect("postgresql://localhost/sfmshop")
+    try:
+        yield conn
+    finally:
+        await conn.close()
+
+
+@app.get("/api/products/{product_id}/full")
+async def get_product_full(product_id: int, conn=Depends(get_db_async)):
+    """Полная информация о товаре из трёх источников"""
+    
+    async def fetch_product():
+        """Товар из PostgreSQL"""
+        row = await conn.fetchrow(
+            "SELECT id, name, price, description FROM products WHERE id = $1",
+            product_id
+        )
+        return dict(row) if row else None
+    
+    async def fetch_reviews():
+        """Отзывы - сначала из кэша, потом из API"""
+        cache_key = f"cache:reviews:{product_id}"
+        
+        # Проверяем кэш
+        cached = await redis_client.get(cache_key)
+        if cached:
+            return json.loads(cached)
+        
+        # Загружаем из API
+        try:
+            response = await http_client.get(
+                f"https://api.reviews.sfmshop.ru/product/{product_id}",
+                timeout=3.0
+            )
+            response.raise_for_status()
+            reviews = response.json()
+            
+            # Кэшируем на 10 минут
+            await redis_client.setex(cache_key, 600, json.dumps(reviews))
+            return reviews
+        except (httpx.HTTPError, httpx.TimeoutException):
+            return []
+    
+    async def count_view():
+        """Инкремент просмотров в Redis"""
+        views = await redis_client.incr(f"views:product:{product_id}")
+        return views
+    
+    # Параллельные запросы
+    product, reviews, views = await asyncio.gather(
+        fetch_product(),
+        fetch_reviews(),
+        count_view(),
+    )
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    return {
+        **product,
+        "price": float(product["price"]),
+        "reviews": reviews,
+        "views": views
+    }
+
 
 
 if __name__ == "__main__":
