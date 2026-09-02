@@ -7,17 +7,75 @@ _project_root = Path(__file__).resolve().parents[2]
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
 
+import asyncio
+import json
+import os
+from contextlib import asynccontextmanager
 from decimal import Decimal
 
-from fastapi import FastAPI, HTTPException, Depends
+from typing import Annotated
+
+import asyncpg
+import httpx
+import redis.asyncio as aioredis
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from src.database.models import get_session, Product, User, Order, OrderItem
 from src.services.cache_service import CacheService
+from src.services.async_service import process_orders_async
 
-app = FastAPI()
+
+http_client: httpx.AsyncClient | None = None
+redis_client: aioredis.Redis | None = None
+pg_pool: asyncpg.Pool | None = None
+
+
+def _asyncpg_dsn(read_only=True):
+    host = os.getenv("DB_REPLICA_HOST" if read_only else "DB_PRIMARY_HOST", "localhost")
+    port = os.getenv("DB_REPLICA_PORT" if read_only else "DB_PORT", "5433" if read_only else "5432")
+    return (
+        f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@"
+        f"{host}:{port}/{os.getenv('DB_NAME', 'sfmshop')}"
+    )
+
+
+async def _create_pg_pool():
+    """Пул к replica; если она недоступна — к primary."""
+    replica_dsn = _asyncpg_dsn(read_only=True)
+    primary_dsn = _asyncpg_dsn(read_only=False)
+    try:
+        return await asyncpg.create_pool(replica_dsn, timeout=5)
+    except OSError:
+        if replica_dsn == primary_dsn:
+            raise
+        return await asyncpg.create_pool(primary_dsn, timeout=5)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global http_client, redis_client, pg_pool
+    http_client = httpx.AsyncClient()
+    redis_client = aioredis.Redis(
+        host=os.getenv("REDIS_HOST", "localhost"),
+        port=int(os.getenv("REDIS_PORT", 6379)),
+        decode_responses=True,
+    )
+    try:
+        pg_pool = await _create_pg_pool()
+    except Exception:
+        await http_client.aclose()
+        await redis_client.aclose()
+        raise
+    yield
+    await http_client.aclose()
+    await redis_client.aclose()
+    await pg_pool.close()
+
+
+app = FastAPI(lifespan=lifespan)
 cache_service = CacheService()
 
 
@@ -199,84 +257,85 @@ def create_order(order: OrderCreate, db=Depends(get_db)):
             for item in new_order.items
         ],
     }
-from fastapi import FastAPI, Depends
-import asyncio
-import asyncpg
-import httpx
-import redis.asyncio as aioredis
-import json
 
-http_client: httpx.AsyncClient | None = None
-# Глобальный Redis-клиент (инициализируется при старте)
-redis_client: aioredis.Redis | None = None
 
 async def get_db_async():
-    conn = await asyncpg.connect("postgresql://localhost/sfmshop")
-    try:
+    """Соединение из пула replica (чтение)."""
+    async with pg_pool.acquire() as conn:
         yield conn
-    finally:
-        await conn.close()
 
 
 @app.get("/api/products/{product_id}/full")
 async def get_product_full(product_id: int, conn=Depends(get_db_async)):
-    """Полная информация о товаре из трёх источников"""
-    
+    """Полная информация о товаре из трёх источников."""
+
     async def fetch_product():
-        """Товар из PostgreSQL"""
         row = await conn.fetchrow(
-            "SELECT id, name, price, description FROM products WHERE id = $1",
-            product_id
+            "SELECT id, name, price, stock FROM products WHERE id = $1",
+            product_id,
         )
         return dict(row) if row else None
-    
+
     async def fetch_reviews():
-        """Отзывы - сначала из кэша, потом из API"""
         cache_key = f"cache:reviews:{product_id}"
-        
-        # Проверяем кэш
         cached = await redis_client.get(cache_key)
         if cached:
             return json.loads(cached)
-        
-        # Загружаем из API
         try:
             response = await http_client.get(
                 f"https://api.reviews.sfmshop.ru/product/{product_id}",
-                timeout=3.0
+                timeout=3.0,
             )
             response.raise_for_status()
             reviews = response.json()
-            
-            # Кэшируем на 10 минут
             await redis_client.setex(cache_key, 600, json.dumps(reviews))
             return reviews
-        except (httpx.HTTPError, httpx.TimeoutException):
+        except httpx.HTTPError:
             return []
-    
+
     async def count_view():
-        """Инкремент просмотров в Redis"""
-        views = await redis_client.incr(f"views:product:{product_id}")
-        return views
-    
-    # Параллельные запросы
-    product, reviews, views = await asyncio.gather(
+        return await redis_client.incr(f"views:product:{product_id}")
+
+    product, reviews = await asyncio.gather(
         fetch_product(),
         fetch_reviews(),
-        count_view(),
     )
-    
+
     if not product:
         raise HTTPException(status_code=404, detail="Товар не найден")
-    
+
+    views = await count_view()
+
     return {
         **product,
         "price": float(product["price"]),
         "reviews": reviews,
-        "views": views
+        "views": views,
     }
 
 
+@app.post("/orders/process")
+async def process_orders_endpoint(order_ids: Annotated[list[int], Field(min_length=1)]):
+    """Параллельная обработка заказов. Ответ после завершения."""
+    results = await process_orders_async(order_ids)
+    return {
+        "status": "success",
+        "processed": len(results),
+        "results": results,
+    }
+
+
+@app.post("/orders/process-background")
+async def process_orders_background(
+    order_ids: Annotated[list[int], Field(min_length=1)],
+    background_tasks: BackgroundTasks,
+):
+    """Принять список заказов и обработать после ответа."""
+    background_tasks.add_task(process_orders_async, order_ids)
+    return {
+        "status": "accepted",
+        "message": "Обработка заказов запущена в фоне",
+    }
 
 if __name__ == "__main__":
     import uvicorn
