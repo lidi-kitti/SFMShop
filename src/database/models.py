@@ -62,14 +62,16 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from urllib.parse import quote_plus
+
 load_dotenv()
 
 
 def _database_url(host, port):
-    return (
-        f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@"
-        f"{host}:{port}/{os.getenv('DB_NAME', 'sfmshop')}"
-    )
+    user = quote_plus(os.getenv("DB_USER", "postgres"))
+    password = quote_plus(os.getenv("DB_PASSWORD", "user") or "")
+    db_name = os.getenv("DB_NAME", "sfmshop")
+    return f"postgresql://{user}:{password}@{host}:{port}/{db_name}"
 
 
 primary_engine = create_engine(
