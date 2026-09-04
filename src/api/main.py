@@ -38,7 +38,38 @@
 # - Синхронная обработка вместо асинхронной (нужен async/await)
 # - Большой размер JSON-ответов (нужна пагинация)
 
-
+# Структура REST API для проекта SFMShop:
+#
+# Заголовки ответа: Content-Type: application/json; Cache-Control
+#   (витрина — public max-age, запись и заказы — no-store).
+# Заголовок запроса Authorization: Bearer <token> — для защищённых маршрутов.
+# Общие ошибки: 401 (нет/просрочена сессия), 404 (не найден), 500 (сервер).
+#
+# Товары (/products):
+# - GET /products — список товаров (200 OK)
+# - GET /products/{id} — товар по ID (200 OK или 404)
+# - POST /products — создать товар, нужен Bearer (201 Created)
+# - PUT /products/{id} — полностью обновить товар, нужен Bearer (200 OK или 404)
+# - DELETE /products/{id} — удалить товар, нужен Bearer (200 OK или 404)
+# - GET /api/products/{id}/full — товар + отзывы + просмотры (200 OK или 404)
+#
+# Версии API:
+# - GET /api/v1/products — {"products": [...]}
+# - GET /api/v2/products — {"data": [...], "metadata": {...}}
+#
+# Пользователи (/users):
+# - GET /users — список пользователей, нужен Bearer (200 OK)
+# - GET /users/{id} — пользователь по ID, нужен Bearer (200 OK или 404)
+# - GET /users/{id}/orders — заказы пользователя, нужен Bearer (200 OK или 404)
+# - POST /users — регистрация (201 Created или 409)
+# - POST /login — сессия Redis, тело {email} (200 OK или 401)
+#
+# Заказы (/orders):
+# - GET /orders — список заказов, нужен Bearer (200 OK)
+# - POST /orders — создать заказ, нужен Bearer (201 Created, 403, 404)
+# - POST /orders/process — обработать заказы, нужен Bearer (200 OK)
+# - POST /orders/process-background — обработка в фоне, нужен Bearer (200 OK)
+#
 import sys
 from pathlib import Path
 
@@ -64,7 +95,7 @@ from typing import Annotated, Optional
 import asyncpg
 import httpx
 import redis.asyncio as aioredis
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Request
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Request, APIRouter
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
@@ -252,6 +283,16 @@ def _product_to_dict(product):
     }
 
 
+def _load_products_list(db):
+    cached_products = cache_service.get_products()
+    if cached_products:
+        return cached_products
+    products = db.execute(select(Product)).scalars().all()
+    products_data = [_product_to_dict(p) for p in products]
+    cache_service.set_products(products_data)
+    return products_data
+
+
 def _order_to_dict(order, include_items=False):
     data = {
         "id": order.id,
@@ -271,6 +312,47 @@ def _order_to_dict(order, include_items=False):
             for item in order.items
         ]
     return data
+
+
+v1_router = APIRouter(prefix="/api/v1", tags=["v1"])
+v2_router = APIRouter(prefix="/api/v2", tags=["v2"])
+
+
+@v1_router.get("/products", status_code=200)
+def get_products_v1(db=Depends(get_read_db)):
+    """Список товаров, v1: простая обёртка products."""
+    try:
+        products = _load_products_list(db)
+        return api_response({"products": products}, cache_control=CACHE_PUBLIC)
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Не удалось получить список товаров")
+
+
+@v2_router.get("/products", status_code=200)
+def get_products_v2(db=Depends(get_read_db)):
+    """Список товаров, v2: data + metadata."""
+    try:
+        products = _load_products_list(db)
+        return api_response(
+            {
+                "data": products,
+                "metadata": {
+                    "version": "2.0",
+                    "count": len(products),
+                },
+            },
+            cache_control=CACHE_PUBLIC,
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Не удалось получить список товаров")
+
+
+app.include_router(v1_router)
+app.include_router(v2_router)
 
 
 @app.get("/", status_code=200)
@@ -311,12 +393,7 @@ def login(body: LoginRequest, db=Depends(get_db)):
 def get_products(db=Depends(get_read_db)):
     """Получить список товаров."""
     try:
-        cached_products = cache_service.get_products()
-        if cached_products:
-            return api_response(cached_products, cache_control=CACHE_PUBLIC)
-        products = db.execute(select(Product)).scalars().all()
-        products_data = [_product_to_dict(p) for p in products]
-        cache_service.set_products(products_data)
+        products_data = _load_products_list(db)
         return api_response(products_data, cache_control=CACHE_PUBLIC)
     except HTTPException:
         raise
@@ -717,5 +794,3 @@ def measure_api_performance(url):
     results['size'] = len(response.content)
 
     return results
-
-
