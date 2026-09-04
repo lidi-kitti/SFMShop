@@ -85,7 +85,9 @@ load_dotenv(_project_root / ".env")
 
 import asyncio
 import json
+import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from urllib.parse import quote_plus
@@ -158,6 +160,9 @@ app = FastAPI(lifespan=lifespan)
 cache_service = CacheService()
 bearer_scheme = HTTPBearer(auto_error=False)
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 CONTENT_TYPE_JSON = "application/json"
 CACHE_PUBLIC = f"public, max-age={CacheService.TTL}"
 CACHE_PRIVATE_NO_STORE = "private, no-store"
@@ -185,6 +190,22 @@ async def set_default_headers(request: Request, call_next):
             response.headers["Cache-Control"] = CACHE_NO_STORE
         else:
             response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Логирует метод, путь, статус и время выполнения каждого запроса."""
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = (time.perf_counter() - start) * 1000
+    logger.info(
+        "%s %s %s %.1fms",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
     return response
 
 
@@ -786,7 +807,6 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
-import time
 import requests
 
 def measure_api_performance(url):
