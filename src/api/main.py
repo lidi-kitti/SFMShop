@@ -85,12 +85,14 @@ load_dotenv(_project_root / ".env")
 
 import asyncio
 import json
+import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from urllib.parse import quote_plus
 
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 
 import asyncpg
 import httpx
@@ -98,7 +100,7 @@ import redis.asyncio as aioredis
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Request, APIRouter
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
@@ -158,6 +160,9 @@ app = FastAPI(lifespan=lifespan)
 cache_service = CacheService()
 bearer_scheme = HTTPBearer(auto_error=False)
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 CONTENT_TYPE_JSON = "application/json"
 CACHE_PUBLIC = f"public, max-age={CacheService.TTL}"
 CACHE_PRIVATE_NO_STORE = "private, no-store"
@@ -185,6 +190,22 @@ async def set_default_headers(request: Request, call_next):
             response.headers["Cache-Control"] = CACHE_NO_STORE
         else:
             response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Логирует метод, путь, статус и время выполнения каждого запроса."""
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = (time.perf_counter() - start) * 1000
+    logger.info(
+        "%s %s %s %.1fms",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
     return response
 
 
@@ -252,26 +273,50 @@ class LoginRequest(BaseModel):
     email: str = Field(max_length=100)
 
 
+class ProductCreate(BaseModel):
+    """Тело POST /products: название, цена и остаток на складе."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: str = Field(min_length=1, max_length=200)
+    price: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+    stock: int = Field(ge=0)
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, value: str) -> str:
+        if not value:
+            raise ValueError("Название товара не может быть пустым")
+        return value
+
+
+class ProductUpdate(ProductCreate):
+    """Тело PUT /products/{id}: те же правила, что при создании."""
+
+
 class OrderItemCreate(BaseModel):
-    product_id: int
+    product_id: int = Field(gt=0)
     quantity: int = Field(gt=0)
 
 
 class OrderCreate(BaseModel):
-    user_id: int
+    """Тело POST /orders: пользователь, хотя бы одна позиция, статус."""
+
+    user_id: int = Field(gt=0)
     items: list[OrderItemCreate] = Field(min_length=1)
-    status: str = Field(default="pending", max_length=20)
+    status: Literal["pending", "paid", "shipped", "cancelled"] = "pending"
 
-
-class ProductCreate(BaseModel):
-    name: str = Field(max_length=100)
-    price: Decimal = Field(gt=0)
-    stock: int = Field(gt=0)
-
-class ProductUpdate(BaseModel):
-    name: str = Field(max_length=100)
-    price: Decimal = Field(gt=0)
-    stock: int = Field(gt=0)
+    @field_validator("items")
+    @classmethod
+    def items_not_empty_and_unique(
+        cls, items: list[OrderItemCreate]
+    ) -> list[OrderItemCreate]:
+        if not items:
+            raise ValueError("Заказ должен содержать хотя бы одну позицию")
+        product_ids = [item.product_id for item in items]
+        if len(product_ids) != len(set(product_ids)):
+            raise ValueError("В заказе не должно быть повторяющихся товаров")
+        return items
 
 
 def _product_to_dict(product):
@@ -762,7 +807,6 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
-import time
 import requests
 
 def measure_api_performance(url):
@@ -794,5 +838,3 @@ def measure_api_performance(url):
     results['size'] = len(response.content)
 
     return results
-
-
