@@ -115,6 +115,7 @@ from slowapi.errors import RateLimitExceeded
 
 from src.api import auth
 from src.api.limiter import limiter
+from src.api.routes import products as products_routes
 
 
 http_client: httpx.AsyncClient | None = None
@@ -427,6 +428,7 @@ def get_products_v2(db=Depends(get_read_db)):
 
 app.include_router(v1_router)
 app.include_router(v2_router)
+app.include_router(products_routes.router, prefix="/api/v1")
 
 
 @app.get("/", status_code=200)
