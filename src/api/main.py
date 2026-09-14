@@ -63,6 +63,8 @@
 # - GET /users/{id}/orders — заказы пользователя, нужен Bearer (200 OK или 404)
 # - POST /users — регистрация (201 Created или 409)
 # - POST /login — сессия Redis, тело {email} (200 OK или 401)
+# - POST /auth/register — регистрация login/password (400 если пользователь есть)
+# - POST /auth/login — вход login/password, лимит RATE_LIMIT_LOGIN (401)
 #
 # Заказы (/orders):
 # - GET /orders — список заказов, нужен Bearer (200 OK)
@@ -107,12 +109,17 @@ from sqlalchemy.exc import IntegrityError
 from src.database.models import get_session, get_user_orders_orm, Product, User, Order, OrderItem
 from src.services.cache_service import CacheService
 from src.services.async_service import process_orders_async
+from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
+from src.api import auth
+from src.api.limiter import limiter
 
 
 http_client: httpx.AsyncClient | None = None
 redis_client: aioredis.Redis | None = None
 pg_pool: asyncpg.Pool | None = None
-
 
 def _asyncpg_dsn(read_only=True):
     host = os.getenv("DB_REPLICA_HOST" if read_only else "DB_PRIMARY_HOST", "localhost")
@@ -167,7 +174,29 @@ CONTENT_TYPE_JSON = "application/json"
 CACHE_PUBLIC = f"public, max-age={CacheService.TTL}"
 CACHE_PRIVATE_NO_STORE = "private, no-store"
 CACHE_NO_STORE = "no-store"
+CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:8000,http://127.0.0.1:8000,http://localhost:5500,http://127.0.0.1:5500",
+    ).split(",")
+    if origin.strip()
+]
 
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+    )
+app.state.limiter = limiter
+app.add_exception_handler(
+    RateLimitExceeded,
+    _rate_limit_exceeded_handler,
+    )
 
 def api_response(content, status_code=200, cache_control=CACHE_NO_STORE):
     """JSON-ответ с Content-Type и Cache-Control."""
@@ -435,7 +464,8 @@ def login(body: LoginRequest, db=Depends(get_db)):
 
 
 @app.get("/products", status_code=200)
-def get_products(db=Depends(get_read_db)):
+@limiter.limit(os.getenv("RATE_LIMIT_PRODUCTS", "30/minute"))
+def get_products(request: Request, db=Depends(get_read_db)):
     """Получить список товаров."""
     try:
         products_data = _load_products_list(db)

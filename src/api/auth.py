@@ -1,8 +1,13 @@
 # Файл src/api/auth.py
-from fastapi import APIRouter, HTTPException
+import os
+
+from fastapi import APIRouter, HTTPException, Request
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field, field_validator
+from dotenv import load_dotenv
+from src.api.limiter import limiter
 
+load_dotenv()
 
 router = APIRouter()
 pwd_context = CryptContext(
@@ -52,7 +57,8 @@ def register(user: UserCreate):
 
 
 @router.post("/login")
-def login(data: LoginRequest):
+@limiter.limit(os.getenv("RATE_LIMIT_LOGIN", "5/minute"))
+def login(request: Request, data: LoginRequest):
     user = users_db.get(data.username)
     if not user or not pwd_context.verify(
         data.password, user["hashed_password"]
