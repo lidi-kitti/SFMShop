@@ -87,8 +87,55 @@ class Product(metaclass=ModelMeta):
         print("Вычисление total_price")
         return self.price * self.quantity
 
-product = Product("Ноутбук", 1000, 10)
-print(product.total_price)  # Вычисление... 10000
-print(product.total_price)  # 10000 (из кэша)
 
-print(product.to_dict())
+def calculate_order_total_original(order):
+    """Исходный расчёт суммы заказа: прямой доступ по ключам и цикл по индексу."""
+    total = 0
+    for i in range(len(order["items"])):
+        total += order["items"][i]["price"] * order["items"][i]["quantity"]
+    return total
+
+
+def calculate_order_total(order):
+    """Сумма заказа из словаря: .get(), один проход, ошибки не роняют расчёт."""
+    try:
+        items = order.get("items", [])
+        return sum(
+            item.get("price", 0) * item.get("quantity", 0)
+            for item in items
+        )
+    except (AttributeError, TypeError, KeyError) as exc:
+        print(f"Ошибка при доступе к ключам заказа: {exc}")
+        return 0
+
+
+# ОТЧЁТ ОБ УЛУЧШЕНИЯХ
+# 1. .get() вместо order["items"] / item["price"] — нет KeyError, если ключа нет;
+#    подставляются безопасные значения (пустой список, 0).
+# 2. try/except вокруг доступа к заказу — некорректный тип (не dict, items не список)
+#    не роняет программу, а возвращает 0.
+# 3. sum() и генератор вместо range(len(...)) — один проход, без повторного
+#    обращения к order["items"] на каждой итерации (читаемость и скорость).
+# 4. На полном заказе результат совпадает с исходной функцией (см. проверку ниже).
+
+if __name__ == "__main__":
+    product = Product("Ноутбук", 1000, 10)
+    print(product.total_price)  # Вычисление... 10000
+    print(product.total_price)  # 10000 (из кэша)
+    print(product.to_dict())
+
+    sample_order = {
+        "id": 1,
+        "items": [
+            {"name": "Ноутбук", "price": 1000, "quantity": 10},
+            {"name": "Мышь", "price": 500, "quantity": 5},
+        ],
+    }
+    original = calculate_order_total_original(sample_order)
+    refactored = calculate_order_total(sample_order)
+    print("Исходная сумма:", original)
+    print("Отрефакторенная сумма:", refactored)
+    print("Результаты совпадают:", original == refactored)
+
+    print("Заказ без items:", calculate_order_total({}))
+    print("Заказ с неверным типом items:", calculate_order_total({"items": None}))
