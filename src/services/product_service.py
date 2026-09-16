@@ -7,12 +7,11 @@ class ProductService:
     def __init__(self, product_repo: ProductRepository):
         self.product_repo = product_repo
 
-    async def get_product(self, product_id: int) -> Product:
-        """Получить товар или бросить ошибку."""
-        product = await self.product_repo.get_by_id(product_id)
-        if product is None:
-            raise ValueError(f"Товар {product_id} не найден")
-        return product
+    async def create_product(self, name: str, price, stock: int) -> Product:
+        """Создать товар в каталоге."""
+        product = Product(name=name, price=price, stock=stock)
+        return await self.product_repo.create(product)
+
 
     async def search_products(
         self,

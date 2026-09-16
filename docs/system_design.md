@@ -2,7 +2,7 @@
 
 SFMShop — REST-магазин: каталог, пользователи, заказы. Источник истины — PostgreSQL; Redis ускоряет повторные чтения и держит сессии; MongoDB принимает логи. Веб-слой — FastAPI (`src/api/main.py`). Ниже — как система устроена, как растёт и какие компромиссы уже заложены в код.
 
-Смежные документы: [db_architecture.md](db_architecture.md), [db_scaling_strategy.md](db_scaling_strategy.md), [database_selection.md](database_selection.md).
+Смежные документы: [db_architecture.md](db_architecture.md), [db_scaling_strategy.md](db_scaling_strategy.md), [database_selection.md](database_selection.md), [scalable_architecture.md](scalable_architecture.md), [performance.md](performance.md).
 
 ## Архитектура
 

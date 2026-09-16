@@ -64,7 +64,8 @@
 # - POST /users — регистрация (201 Created или 409)
 # - POST /login — сессия Redis, тело {email} (200 OK или 401)
 # - POST /auth/register — регистрация login/password (400 если пользователь есть)
-# - POST /auth/login — вход login/password, лимит RATE_LIMIT_LOGIN (401)
+# - POST /auth/login — JWT (username/password, лимит RATE_LIMIT_LOGIN)
+# - POST /api/v1/login — JWT для Authorization: Bearer <token>
 #
 # Заказы (/orders):
 # - GET /orders — список заказов, нужен Bearer (200 OK)
@@ -100,7 +101,7 @@ import asyncpg
 import httpx
 import redis.asyncio as aioredis
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Request, APIRouter
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
@@ -109,13 +110,15 @@ from sqlalchemy.exc import IntegrityError
 from src.database.models import get_session, get_user_orders_orm, Product, User, Order, OrderItem
 from src.services.cache_service import CacheService
 from src.services.async_service import process_orders_async
+from src.services.external_api_service import ExchangeClient
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from src.api import auth
+from src.api.auth import decode_access_token
 from src.api.limiter import limiter
-from src.api.routes import products as products_routes
+from src.api.routes import exchange, orders, products, users
 
 
 http_client: httpx.AsyncClient | None = None
@@ -158,6 +161,7 @@ async def lifespan(app: FastAPI):
         await http_client.aclose()
         await redis_client.aclose()
         raise
+    app.state.exchange_client = ExchangeClient(client=http_client)
     yield
     await http_client.aclose()
     await redis_client.aclose()
@@ -185,6 +189,7 @@ CORS_ORIGINS = [
 ]
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(auth.v1_router, prefix="/api/v1", tags=["auth"])
 
 app.add_middleware(
     CORSMiddleware,
@@ -252,16 +257,22 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     )
 
 
-def require_auth(
+async def require_auth(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
 ):
-    """Проверяет Authorization: Bearer <session_id> по сессии в Redis."""
+    """Проверяет Authorization: Bearer — сначала JWT, затем сессия Redis."""
     if credentials is None or not credentials.credentials:
         raise HTTPException(
             status_code=401,
             detail="Требуется заголовок Authorization: Bearer <token>",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    payload = decode_access_token(credentials.credentials)
+    if payload and payload.get("user_id") is not None:
+        return {
+            "user_id": payload["user_id"],
+            "username": payload.get("sub"),
+        }
     session = cache_service.get_user_session(credentials.credentials)
     if not session:
         raise HTTPException(
@@ -394,7 +405,7 @@ v2_router = APIRouter(prefix="/api/v2", tags=["v2"])
 
 
 @v1_router.get("/products", status_code=200)
-def get_products_v1(db=Depends(get_read_db)):
+async def get_products_v1(db=Depends(get_read_db)):
     """Список товаров, v1: простая обёртка products."""
     try:
         products = _load_products_list(db)
@@ -406,7 +417,7 @@ def get_products_v1(db=Depends(get_read_db)):
 
 
 @v2_router.get("/products", status_code=200)
-def get_products_v2(db=Depends(get_read_db)):
+async def get_products_v2(db=Depends(get_read_db)):
     """Список товаров, v2: data + metadata."""
     try:
         products = _load_products_list(db)
@@ -428,19 +439,31 @@ def get_products_v2(db=Depends(get_read_db)):
 
 app.include_router(v1_router)
 app.include_router(v2_router)
-app.include_router(products_routes.router, prefix="/api/v1")
+app.include_router(products.router, prefix="/api/v1")
+app.include_router(orders.router, prefix="/api/v1")
+app.include_router(users.router, prefix="/api/v1")
+app.include_router(exchange.router, prefix="/api/v1")
 
 
 @app.get("/", status_code=200)
-def read_root():
+async def read_root():
     return api_response(
         {"message": "Добро пожаловать в SFMShop API"},
         cache_control="no-cache",
     )
 
 
+@app.get("/admin")
+async def admin_page():
+    """HTML-админка: форма товара и список через fetch."""
+    return FileResponse(
+        _project_root / "templates" / "admin.html",
+        media_type="text/html; charset=utf-8",
+    )
+
+
 @app.post("/login", status_code=200)
-def login(body: LoginRequest, db=Depends(get_db)):
+async def login(body: LoginRequest, db=Depends(get_db)):
     """Создать сессию: Authorization: Bearer <access_token>."""
     try:
         user = db.execute(select(User).where(User.email == body.email)).scalar_one_or_none()
@@ -467,7 +490,7 @@ def login(body: LoginRequest, db=Depends(get_db)):
 
 @app.get("/products", status_code=200)
 @limiter.limit(os.getenv("RATE_LIMIT_PRODUCTS", "30/minute"))
-def get_products(request: Request, db=Depends(get_read_db)):
+async def get_products(request: Request, db=Depends(get_read_db)):
     """Получить список товаров."""
     try:
         products_data = _load_products_list(db)
@@ -479,7 +502,7 @@ def get_products(request: Request, db=Depends(get_read_db)):
 
 
 @app.get("/products/{product_id}", status_code=200)
-def get_product(product_id: int, db=Depends(get_read_db)):
+async def get_product(product_id: int, db=Depends(get_read_db)):
     """Получить товар по ID."""
     try:
         cached_product = cache_service.get_product(product_id)
@@ -498,7 +521,7 @@ def get_product(product_id: int, db=Depends(get_read_db)):
 
 
 @app.post("/products", status_code=201)
-def create_product(
+async def create_product(
     product: ProductCreate,
     db=Depends(get_db),
     session=Depends(require_auth),
@@ -517,7 +540,7 @@ def create_product(
 
 
 @app.put("/products/{product_id}", status_code=200)
-def update_product(
+async def update_product(
     product_id: int,
     product: ProductUpdate,
     db=Depends(get_db),
@@ -542,7 +565,7 @@ def update_product(
 
 
 @app.delete("/products/{product_id}", status_code=200)
-def delete_product(
+async def delete_product(
     product_id: int,
     db=Depends(get_db),
     session=Depends(require_auth),
@@ -567,7 +590,7 @@ def delete_product(
 
 
 @app.get("/users", status_code=200)
-def get_users(db=Depends(get_read_db), session=Depends(require_auth)):
+async def get_users(db=Depends(get_read_db), session=Depends(require_auth)):
     """Получить список пользователей."""
     try:
         cached_users = cache_service.get_users()
@@ -587,7 +610,7 @@ def get_users(db=Depends(get_read_db), session=Depends(require_auth)):
 
 
 @app.get("/users/{user_id}", status_code=200)
-def get_user(user_id: int, db=Depends(get_read_db), session=Depends(require_auth)):
+async def get_user(user_id: int, db=Depends(get_read_db), session=Depends(require_auth)):
     """Получить пользователя по ID."""
     try:
         cached_user = cache_service.get_user(user_id)
@@ -606,7 +629,7 @@ def get_user(user_id: int, db=Depends(get_read_db), session=Depends(require_auth
 
 
 @app.get("/users/{user_id}/orders", status_code=200)
-def get_user_orders(user_id: int, db=Depends(get_read_db), session=Depends(require_auth)):
+async def get_user_orders(user_id: int, db=Depends(get_read_db), session=Depends(require_auth)):
     """Получить заказы пользователя."""
     try:
         user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
@@ -628,7 +651,7 @@ def get_user_orders(user_id: int, db=Depends(get_read_db), session=Depends(requi
 
 
 @app.post("/users", status_code=201)
-def create_user(user: UserCreate, db=Depends(get_db)):
+async def create_user(user: UserCreate, db=Depends(get_db)):
     """Создать нового пользователя."""
     try:
         new_user = User(name=user.name, email=user.email, balance=user.balance)
@@ -655,7 +678,7 @@ def create_user(user: UserCreate, db=Depends(get_db)):
 
 
 @app.get("/orders", status_code=200)
-def get_orders(
+async def get_orders(
     user_id: int | None = None,
     db=Depends(get_read_db),
     session=Depends(require_auth),
@@ -677,7 +700,7 @@ def get_orders(
 
 
 @app.post("/orders", status_code=201)
-def create_order(
+async def create_order(
     order: OrderCreate,
     db=Depends(get_db),
     session=Depends(require_auth),
