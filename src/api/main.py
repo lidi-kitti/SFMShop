@@ -111,7 +111,7 @@ from src.database.models import get_session, get_user_orders_orm, Product, User,
 from src.services.cache_service import CacheService
 from src.services.async_service import process_orders_async
 from src.services.external_api_service import ExchangeClient
-from src.services.queue_producer import QueueProducer
+from src.services.queue_producer import QueueProducer, send_message
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -751,25 +751,23 @@ async def create_order(
             cache_service.invalidate_product(product_id)
 
         try:
-            producer.send_order_task(
-                new_order.id,
-                "send_email",
-                {"user_email": user.email},
-            )
-            producer.send_order_task(
-                new_order.id,
-                "update_stock",
-                {
+            extras = {
+                "send_email": {"user_email": user.email},
+                "update_stock": {
                     "items": [
                         {"product_id": item.product_id, "quantity": item.quantity}
                         for item in new_order.items
                     ]
                 },
-            )
-            producer.send_order_task(new_order.id, "generate_report", {})
+                "generate_report": {},
+            }
+            for task in ("send_email", "update_stock", "generate_report"):
+                payload = {"task": task, "order_id": new_order.id, **extras[task]}
+                if not producer.send_order_task(new_order.id, task, extras[task]):
+                    send_message("order_processing", payload)
         except Exception:
             logger.exception(
-                "Не удалось поставить задачи заказа %s в очередь",
+                "RabbitMQ недоступен, заказ %s всё равно создан",
                 new_order.id,
             )
 

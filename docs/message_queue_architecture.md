@@ -84,6 +84,14 @@ Checkout масштабируется primary PostgreSQL; фон — **числ�
 
 ### Горизонтальное масштабирование Consumer
 
+- В `QueueConsumer.connect` стоит **`basic_qos(prefetch_count=1)`**: воркер берёт одно сообщение, следующее — только после ack. Так нагрузка делится между процессами, а не оседаёт на одном.
+- Несколько экземпляров — несколько процессов на одну durable-очередь `order_processing` (competing consumers):
+
+```text
+python -c "from src.services.queue_consumer import QueueConsumer; QueueConsumer().start_consuming()"
+```
+
+Запусти команду в 2–3 терминалах. Брокер отдаст каждое сообщение ровно одному воркеру. API (`POST /orders`) публикует и сразу отвечает; обработка `send_email` / `update_stock` / `generate_report` идёт асинхронно.
 - Воркеры stateless: читают брокер, ходят в SMTP / replica / Redis. Добавить процесс = +1 consumer в группе (`order_worker` в `producer_consumer.py`, N реплик в [scalable_architecture.md](scalable_architecture.md)).
 - Условие scale-out: глубина очереди растёт дольше окна пика **или** lag (время от publish до ack) выше SLO письма (минуты, не часы).
 - Scale-in после распродажи, чтобы не держать простой SMTP.
