@@ -159,7 +159,7 @@ def start_consumer(queue_name: str):
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
     channel.queue_declare(queue=queue_name, durable=True)
-    channel.basic_consume(queue=queue_name, on_message_callback=process_message, auto_ack=True)
+    channel.basic_consume(queue=queue_name, on_message_callback=process_message, auto_ack=False)
     print(f"Consumer запущен для очереди {queue_name}")
     channel.start_consuming()
     
