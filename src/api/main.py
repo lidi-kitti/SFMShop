@@ -111,6 +111,7 @@ from src.database.models import get_session, get_user_orders_orm, Product, User,
 from src.services.cache_service import CacheService
 from src.services.async_service import process_orders_async
 from src.services.external_api_service import ExchangeClient
+from src.services.queue_producer import QueueProducer
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -170,6 +171,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 cache_service = CacheService()
+producer = QueueProducer()
 bearer_scheme = HTTPBearer(auto_error=False)
 
 logging.basicConfig(level=logging.INFO)
@@ -746,6 +748,29 @@ async def create_order(
         cache_service.invalidate_products()
         for product_id in set(touched_product_ids):
             cache_service.invalidate_product(product_id)
+
+        try:
+            producer.send_order_task(
+                new_order.id,
+                "send_email",
+                {"user_email": user.email},
+            )
+            producer.send_order_task(
+                new_order.id,
+                "update_stock",
+                {
+                    "items": [
+                        {"product_id": item.product_id, "quantity": item.quantity}
+                        for item in new_order.items
+                    ]
+                },
+            )
+            producer.send_order_task(new_order.id, "generate_report", {})
+        except Exception:
+            logger.exception(
+                "Не удалось поставить задачи заказа %s в очередь",
+                new_order.id,
+            )
 
         return api_response(
             _order_to_dict(new_order, include_items=True),
