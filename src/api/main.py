@@ -119,7 +119,7 @@ from slowapi.errors import RateLimitExceeded
 from src.api import auth
 from src.api.auth import decode_access_token
 from src.api.limiter import limiter
-from src.api.routes import exchange, orders, products, users
+from src.api.routes import background, exchange, orders, products, users
 
 
 http_client: httpx.AsyncClient | None = None
@@ -445,6 +445,7 @@ app.include_router(products.router, prefix="/api/v1")
 app.include_router(orders.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(exchange.router, prefix="/api/v1")
+app.include_router(background.router)
 
 
 @app.get("/", status_code=200)
