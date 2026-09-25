@@ -103,11 +103,13 @@ import redis.asyncio as aioredis
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Request, APIRouter
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from src.database.models import get_session, get_user_orders_orm, Product, User, Order, OrderItem
+from src.database import queries
+from src.services import cache_service as cache_service_mod
 from src.services.cache_service import CacheService
 from src.services.async_service import process_orders_async
 from src.services.external_api_service import ExchangeClient
@@ -159,14 +161,14 @@ async def lifespan(app: FastAPI):
     try:
         pg_pool = await _create_pg_pool()
     except Exception:
-        await http_client.aclose()
-        await redis_client.aclose()
-        raise
+        logger.warning("PostgreSQL недоступен, приложение стартует без пула")
+        pg_pool = None
     app.state.exchange_client = ExchangeClient(client=http_client)
     yield
     await http_client.aclose()
     await redis_client.aclose()
-    await pg_pool.close()
+    if pg_pool is not None:
+        await pg_pool.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -343,10 +345,14 @@ class OrderItemCreate(BaseModel):
 
 
 class OrderCreate(BaseModel):
-    """Тело POST /orders: пользователь, хотя бы одна позиция, статус."""
+    """Тело POST /orders: пользователь и позиции или одна пара product_id/quantity."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
 
     user_id: int = Field(gt=0)
-    items: list[OrderItemCreate] = Field(min_length=1)
+    product_id: Optional[int] = Field(default=None, gt=0)
+    quantity: Optional[int] = Field(default=None, gt=0)
+    items: list[OrderItemCreate] = Field(default_factory=list)
     status: Literal["pending", "paid", "shipped", "cancelled"] = "pending"
 
     @field_validator("items")
@@ -355,11 +361,19 @@ class OrderCreate(BaseModel):
         cls, items: list[OrderItemCreate]
     ) -> list[OrderItemCreate]:
         if not items:
-            raise ValueError("Заказ должен содержать хотя бы одну позицию")
+            return items
         product_ids = [item.product_id for item in items]
         if len(product_ids) != len(set(product_ids)):
             raise ValueError("В заказе не должно быть повторяющихся товаров")
         return items
+
+    @model_validator(mode="after")
+    def require_items_or_product(self):
+        if self.items:
+            return self
+        if self.product_id and self.quantity:
+            return self
+        raise ValueError("Нужны items или product_id и quantity")
 
 
 def _product_to_dict(product):
@@ -496,6 +510,9 @@ async def login(body: LoginRequest, db=Depends(get_db)):
 async def get_products(request: Request, db=Depends(get_read_db)):
     """Получить список товаров."""
     try:
+        cached = cache_service_mod.get_cached_products()
+        if cached is not None:
+            return api_response(cached, cache_control=CACHE_PUBLIC)
         products_data = _load_products_list(db)
         return api_response(products_data, cache_control=CACHE_PUBLIC)
     except HTTPException:
@@ -706,10 +723,30 @@ async def get_orders(
 async def create_order(
     order: OrderCreate,
     db=Depends(get_db),
-    session=Depends(require_auth),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
 ):
     """Создать заказ: заказ + позиции + списание остатка в одной транзакции."""
     try:
+        if order.product_id and order.quantity and not order.items:
+            order_id = queries.create_order(
+                user_id=order.user_id,
+                product_id=order.product_id,
+                quantity=order.quantity,
+                total=None,
+            )
+            return api_response(
+                {
+                    "id": order_id,
+                    "user_id": order.user_id,
+                    "product_id": order.product_id,
+                    "quantity": order.quantity,
+                    "message": "Заказ создан",
+                },
+                status_code=200,
+                cache_control=CACHE_NO_STORE,
+            )
+
+        session = await require_auth(credentials)
         if session.get("user_id") != order.user_id:
             raise HTTPException(status_code=403, detail="Заказ можно создать только от своего имени")
 

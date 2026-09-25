@@ -120,11 +120,11 @@ def get_orders_with_products(user_id):
             return []
 
 
-def create_order(user_id, total):
+def create_order(user_id, product_id=None, quantity=None, total=None):
     """Создать заказ через ORM и вернуть id."""
     session = get_session()
     try:
-        order = Order(user_id=user_id, total=total)
+        order = Order(user_id=user_id, total=total or 0)
         session.add(order)
         session.commit()
         return order.id

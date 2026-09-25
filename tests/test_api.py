@@ -1,9 +1,15 @@
+from unittest.mock import patch
+
 import pytest
+from fastapi.testclient import TestClient
 
 from src.api.limiter import limiter
+from src.api.main import app
 from src.api.router import ProductAPI
 from src.api.schemas import ProductCreate
 from src.schemas.product import ProductResponse
+
+client = TestClient(app)
 
 
 def test_product_api_crud():
@@ -52,3 +58,41 @@ def test_product_schemas_and_limiter():
     )
     assert response.quantity == 3
     assert limiter._key_func is not None
+
+
+# Правило patch where it is looked up: если бы main.py импортировал имя к себе
+# (from ... import create_order), патчили бы 'src.api.main.create_order'.
+# В текущем main.py импорта нет, поэтому патчим источник - модуль, где имя объявлено.
+@patch("src.services.cache_service.get_cached_products")
+def test_get_products(mock_get_cached):
+    """Тест получения товаров"""
+    mock_get_cached.return_value = [
+        {"id": 1, "name": "Ноутбук", "price": 50000, "stock": 5},
+        {"id": 2, "name": "Мышь", "price": 500, "stock": 20},
+        {"id": 3, "name": "Клавиатура", "price": 1500, "stock": 10},
+    ]
+    response = client.get("/products")
+    assert response.status_code == 200
+    products = response.json()
+    assert len(products) == 3
+    mock_get_cached.assert_called()
+
+
+@patch("src.database.queries.create_order")
+def test_create_order(mock_create_order):
+    """Тест создания заказа"""
+    mock_create_order.return_value = 5
+    response = client.post(
+        "/orders",
+        json={"user_id": 1, "product_id": 2, "quantity": 1},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == 5
+    assert body["message"] == "Заказ создан"
+    mock_create_order.assert_called_once_with(
+        user_id=1,
+        product_id=2,
+        quantity=1,
+        total=None,
+    )

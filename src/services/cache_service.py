@@ -80,6 +80,11 @@ class CacheService:
         self.client.delete(f"session:{session_id}")
 
 
+def get_cached_products():
+    """Список товаров из Redis. Промах — None, вызывающий идёт в БД."""
+    return CacheService().get_products()
+
+
 if __name__ == "__main__":
     cache = CacheService()
 

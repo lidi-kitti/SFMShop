@@ -70,10 +70,12 @@ class ExchangeRateClient:
 
         return price * rate
 
-# Использование
-client = ExchangeRateClient()
-converted_price = client.convert_price(1000, "USD", "RUB")
-if converted_price is not None:
-    print(f"1000 USD = {converted_price} RUB")
-else:
-    print("Не удалось получить курс валют")
+ExchangeClient = ExchangeRateClient
+
+if __name__ == "__main__":
+    client = ExchangeRateClient()
+    converted_price = client.convert_price(1000, "USD", "RUB")
+    if converted_price is not None:
+        print(f"1000 USD = {converted_price} RUB")
+    else:
+        print("Не удалось получить курс валют")

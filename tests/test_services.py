@@ -1,10 +1,12 @@
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.models.product import Product
 from src.models.user import User
 from src.services.discounts import DiscountStrategy, FixedDiscount, PercentDiscount
+from src.services.exchange_client import ExchangeClient
 from src.services.order_calculator import OrderCalculator
 from src.services.order_validator import OrderValidator
 from src.services.product_calculator import ProductCalculator
@@ -53,3 +55,33 @@ def test_service_order_calculator_and_validator():
 
 def test_discount_strategy_is_abstract():
     assert issubclass(PercentDiscount, DiscountStrategy)
+
+
+@patch("src.services.exchange_client.requests.get")
+def test_get_exchange_rate(mock_get):
+    """Тест: курс берётся из ответа внешнего API, сети нет"""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"rates": {"RUB": 92.5, "EUR": 0.91}}
+    mock_get.return_value = mock_response
+
+    client = ExchangeClient()
+    rate = client.get_exchange_rate("USD", "RUB")
+
+    assert rate == 92.5
+    mock_get.assert_called_once()
+    args, kwargs = mock_get.call_args
+    assert args[0].endswith("/USD")
+    assert kwargs["timeout"] == client.timeout
+
+
+@patch("src.services.exchange_client.requests.get")
+def test_get_exchange_rate_currency_missing(mock_get):
+    """Тест: нужной валюты нет в ответе API"""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"rates": {"EUR": 0.91}}
+    mock_get.return_value = mock_response
+
+    client = ExchangeClient()
+    assert client.get_exchange_rate("USD", "RUB") is None
+    mock_get.assert_called_once()
+
