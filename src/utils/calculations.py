@@ -119,3 +119,18 @@ def benchmark_search(products, product_id):
         "speedup": speedup,
         "result": result_dict,
     }
+
+def calculate_delivery(weight, distance):
+    """Расчет стоимости доставки"""
+    return weight * distance * 0.1
+
+
+FREE_DELIVERY_FROM = 5000
+
+
+def calculate_delivery_discount(order_total, delivery_cost):
+    """Стоимость доставки: 0, если сумма заказа от 5000, иначе вся плата."""
+    if order_total >= FREE_DELIVERY_FROM:
+        return 0
+    return delivery_cost
+

@@ -6,6 +6,8 @@ import pytest
 from src.utils.calculations import (
     benchmark_calculate_total,
     benchmark_search,
+    calculate_delivery,
+    calculate_delivery_discount,
     calculate_discount,
     calculate_total,
     calculate_total_orders,
@@ -15,7 +17,6 @@ from src.utils.calculations import (
     find_product_in_list,
 )
 from src.utils.validators import validate_age, validate_email
-
 
 @pytest.mark.parametrize(
     "price, discount_rate, expected",
@@ -85,3 +86,19 @@ def test_product_search_and_benchmark():
     assert find_product_in_dict(index, 99) is None
     report = benchmark_search(products, 2)
     assert report["result"].id == 2
+
+def test_calculate_delivery():
+    """Тест: расчет стоимости доставки"""
+    result = calculate_delivery(weight=5, distance=50)
+    assert result == 25
+
+
+@pytest.mark.parametrize("order_total,delivery_cost,expected", [
+    (4999, 400, 400),
+    (5000, 400, 0),
+    (12000, 700, 0),
+])
+def test_calculate_delivery_discount(order_total, delivery_cost, expected):
+    """Тест: бесплатная доставка от 5000 рублей"""
+    assert calculate_delivery_discount(order_total, delivery_cost) == expected
+
