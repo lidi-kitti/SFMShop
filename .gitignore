@@ -66,3 +66,5 @@ coverage.xml
 # Cursor / локальные артефакты агента
 .cursor/
 erl_crash.dump
+.coveragerc
+src/models/__pycache__/product.cpython-314.pyc
