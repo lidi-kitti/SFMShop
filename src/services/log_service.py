@@ -1,15 +1,13 @@
 import importlib
 import importlib.util
 import logging
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from dotenv import load_dotenv
 from pymongo import MongoClient
 
-load_dotenv()
+from src.core.config import settings
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _LOG_DIR = _PROJECT_ROOT / "logs"
@@ -27,8 +25,8 @@ class LogService:
 
     def __init__(self, host=None, port=None, db_name=None):
         self.client = MongoClient(
-            host=host or os.getenv("MONGO_HOST", "localhost"),
-            port=int(port or os.getenv("MONGO_PORT", 27017)),
+            host=host or settings.mongo_host,
+            port=int(port or settings.mongo_port),
             serverSelectionTimeoutMS=2000,
         )
         self.collection = self.client[db_name or self.DB_NAME][self.COLLECTION_NAME]
@@ -91,7 +89,7 @@ class LogService:
         """
         formatted = self._format_message(message, **kwargs)
         self.logger.critical("ALERT: %s", formatted)
-        sentry_dsn = os.getenv("SENTRY_DSN")
+        sentry_dsn = settings.sentry_dsn
         if not sentry_dsn:
             return
         if importlib.util.find_spec("sentry_sdk") is None:
@@ -224,7 +222,8 @@ if __name__ == "__main__":
         print(f"Логов ошибок: {len(error_logs)}")
     except Exception as exc:
         print(
-            "MongoDB недоступна на localhost:27017. "
+            "MongoDB недоступна на "
+            f"{settings.mongo_host}:{settings.mongo_port}. "
             "Запусти mongod и повтори. "
             f"Детали: {exc.__class__.__name__}"
         )

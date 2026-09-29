@@ -1,16 +1,14 @@
 import json
-import os
 import uuid
 
 import redis
-from dotenv import load_dotenv
 
-load_dotenv()
+from src.core.config import settings
 
-# В Docker REDIS_HOST — имя сервиса redis, не localhost
 redis_client = redis.Redis(
-    host=os.getenv("REDIS_HOST", "localhost"),
-    port=int(os.getenv("REDIS_PORT", 6379)),
+    host=settings.redis_host,
+    port=settings.redis_port,
+    db=0,
     decode_responses=True,
     protocol=2,
 )
@@ -29,8 +27,8 @@ class CacheService:
             self.client = redis_client
             return
         self.client = redis.Redis(
-            host=host or os.getenv("REDIS_HOST", "localhost"),
-            port=int(port or os.getenv("REDIS_PORT", 6379)),
+            host=host or settings.redis_host,
+            port=int(port or settings.redis_port),
             db=db,
             decode_responses=True,
             protocol=2,
