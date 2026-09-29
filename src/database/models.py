@@ -76,14 +76,16 @@ def _database_url(host, port):
 
 primary_engine = create_engine(
     _database_url(
-        os.getenv("DB_PRIMARY_HOST", "localhost"),
+        os.getenv("DB_HOST") or os.getenv("DB_PRIMARY_HOST", "localhost"),
         os.getenv("DB_PORT", "5432"),
     )
 )
 replica_engine = create_engine(
     _database_url(
-        os.getenv("DB_REPLICA_HOST", "localhost"),
-        os.getenv("DB_REPLICA_PORT", "5433"),
+        os.getenv("DB_REPLICA_HOST")
+        or os.getenv("DB_HOST")
+        or os.getenv("DB_PRIMARY_HOST", "localhost"),
+        os.getenv("DB_REPLICA_PORT") or os.getenv("DB_PORT", "5432"),
     )
 )
 

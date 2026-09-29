@@ -7,6 +7,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# В Docker REDIS_HOST — имя сервиса redis, не localhost
+redis_client = redis.Redis(
+    host=os.getenv("REDIS_HOST", "localhost"),
+    port=int(os.getenv("REDIS_PORT", 6379)),
+    decode_responses=True,
+    protocol=2,
+)
+
 
 class CacheService:
     """Кэш Redis: каталог, пользователи и сессии. Промах обрабатывает вызывающий код."""
@@ -17,6 +25,9 @@ class CacheService:
     SESSION_TTL = 86400
 
     def __init__(self, host=None, port=None, db=0):
+        if host is None and port is None and db == 0:
+            self.client = redis_client
+            return
         self.client = redis.Redis(
             host=host or os.getenv("REDIS_HOST", "localhost"),
             port=int(port or os.getenv("REDIS_PORT", 6379)),

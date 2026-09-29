@@ -107,7 +107,16 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from src.database.models import get_session, get_user_orders_orm, Product, User, Order, OrderItem
+from src.database.models import (
+    Base,
+    get_session,
+    get_user_orders_orm,
+    primary_engine,
+    Product,
+    User,
+    Order,
+    OrderItem,
+)
 from src.database import queries
 from src.services import cache_service as cache_service_mod
 from src.services.cache_service import CacheService
@@ -130,8 +139,16 @@ redis_client: aioredis.Redis | None = None
 pg_pool: asyncpg.Pool | None = None
 
 def _asyncpg_dsn(read_only=True):
-    host = os.getenv("DB_REPLICA_HOST" if read_only else "DB_PRIMARY_HOST", "localhost")
-    port = os.getenv("DB_REPLICA_PORT" if read_only else "DB_PORT", "5433" if read_only else "5432")
+    if read_only:
+        host = (
+            os.getenv("DB_REPLICA_HOST")
+            or os.getenv("DB_HOST")
+            or os.getenv("DB_PRIMARY_HOST", "localhost")
+        )
+        port = os.getenv("DB_REPLICA_PORT") or os.getenv("DB_PORT", "5432")
+    else:
+        host = os.getenv("DB_HOST") or os.getenv("DB_PRIMARY_HOST", "localhost")
+        port = os.getenv("DB_PORT", "5432")
     user = quote_plus(os.getenv("DB_USER", "postgres"))
     password = quote_plus(os.getenv("DB_PASSWORD", "user") or "")
     db_name = os.getenv("DB_NAME", "sfmshop")
@@ -164,6 +181,10 @@ async def lifespan(app: FastAPI):
     except Exception:
         logger.warning("PostgreSQL недоступен, приложение стартует без пула")
         pg_pool = None
+    try:
+        Base.metadata.create_all(bind=primary_engine)
+    except Exception:
+        logger.warning("Не удалось создать таблицы PostgreSQL")
     app.state.exchange_client = ExchangeClient(client=http_client)
     yield
     await http_client.aclose()

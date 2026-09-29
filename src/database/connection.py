@@ -8,23 +8,25 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-# Основная БД (для записи)
+# Основная БД (для записи): DB_HOST — имя сервиса в Docker (db)
 PRIMARY_DB = {
-    "host": os.getenv("DB_PRIMARY_HOST", "localhost"),
+    "host": os.getenv("DB_HOST") or os.getenv("DB_PRIMARY_HOST", "localhost"),
     "port": int(os.getenv("DB_PORT", 5432)),
     "database": os.getenv("DB_NAME", "sfmshop"),
     "user": os.getenv("DB_USER", "postgres"),
-    "password": os.getenv("DB_PASSWORD")
-    }
+    "password": os.getenv("DB_PASSWORD"),
+}
 
-# Реплика (для чтения)
+# Реплика (для чтения): без отдельной реплики — тот же DB_HOST
 REPLICA_DB = {
-    "host": os.getenv("DB_REPLICA_HOST", "localhost"),
-    "port": int(os.getenv("DB_REPLICA_PORT", 5433)),
+    "host": os.getenv("DB_REPLICA_HOST")
+    or os.getenv("DB_HOST")
+    or os.getenv("DB_PRIMARY_HOST", "localhost"),
+    "port": int(os.getenv("DB_REPLICA_PORT") or os.getenv("DB_PORT", 5432)),
     "database": os.getenv("DB_NAME", "sfmshop"),
     "user": os.getenv("DB_USER", "postgres"),
-    "password": os.getenv("DB_PASSWORD")
-    }
+    "password": os.getenv("DB_PASSWORD"),
+}
 
 
 @contextmanager
