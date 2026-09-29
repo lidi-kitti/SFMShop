@@ -122,6 +122,7 @@ from src.services import cache_service as cache_service_mod
 from src.services.cache_service import CacheService
 from src.services.async_service import process_orders_async
 from src.services.external_api_service import ExchangeClient
+from src.core.config import settings
 from src.services.queue_producer import QueueProducer, send_message
 from src.services.log_service import log_service
 from fastapi.middleware.cors import CORSMiddleware
@@ -140,19 +141,14 @@ pg_pool: asyncpg.Pool | None = None
 
 def _asyncpg_dsn(read_only=True):
     if read_only:
-        host = (
-            os.getenv("DB_REPLICA_HOST")
-            or os.getenv("DB_HOST")
-            or os.getenv("DB_PRIMARY_HOST", "localhost")
-        )
-        port = os.getenv("DB_REPLICA_PORT") or os.getenv("DB_PORT", "5432")
+        host = settings.db_replica_host or settings.db_host or settings.db_primary_host
+        port = settings.db_replica_port or settings.db_port
     else:
-        host = os.getenv("DB_HOST") or os.getenv("DB_PRIMARY_HOST", "localhost")
-        port = os.getenv("DB_PORT", "5432")
-    user = quote_plus(os.getenv("DB_USER", "postgres"))
-    password = quote_plus(os.getenv("DB_PASSWORD", "user") or "")
-    db_name = os.getenv("DB_NAME", "sfmshop")
-    return f"postgresql://{user}:{password}@{host}:{port}/{db_name}"
+        host = settings.db_host or settings.db_primary_host
+        port = settings.db_port
+    user = quote_plus(settings.db_user)
+    password = quote_plus(settings.db_password or "")
+    return f"postgresql://{user}:{password}@{host}:{port}/{settings.db_name}"
 
 
 async def _create_pg_pool():
@@ -172,8 +168,8 @@ async def lifespan(app: FastAPI):
     global http_client, redis_client, pg_pool
     http_client = httpx.AsyncClient()
     redis_client = aioredis.Redis(
-        host=os.getenv("REDIS_HOST", "localhost"),
-        port=int(os.getenv("REDIS_PORT", 6379)),
+        host=settings.redis_host,
+        port=settings.redis_port,
         decode_responses=True,
     )
     try:

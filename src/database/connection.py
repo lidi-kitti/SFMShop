@@ -1,31 +1,27 @@
-import os
 from contextlib import contextmanager
 
 import psycopg2
 from psycopg2 import Error
-from dotenv import load_dotenv
 
-load_dotenv()
+from src.core.config import settings
 
 
 # Основная БД (для записи): DB_HOST — имя сервиса в Docker (db)
 PRIMARY_DB = {
-    "host": os.getenv("DB_HOST") or os.getenv("DB_PRIMARY_HOST", "localhost"),
-    "port": int(os.getenv("DB_PORT", 5432)),
-    "database": os.getenv("DB_NAME", "sfmshop"),
-    "user": os.getenv("DB_USER", "postgres"),
-    "password": os.getenv("DB_PASSWORD"),
+    "host": settings.db_host or settings.db_primary_host,
+    "port": int(settings.db_port),
+    "database": settings.db_name,
+    "user": settings.db_user,
+    "password": settings.db_password,
 }
 
 # Реплика (для чтения): без отдельной реплики — тот же DB_HOST
 REPLICA_DB = {
-    "host": os.getenv("DB_REPLICA_HOST")
-    or os.getenv("DB_HOST")
-    or os.getenv("DB_PRIMARY_HOST", "localhost"),
-    "port": int(os.getenv("DB_REPLICA_PORT") or os.getenv("DB_PORT", 5432)),
-    "database": os.getenv("DB_NAME", "sfmshop"),
-    "user": os.getenv("DB_USER", "postgres"),
-    "password": os.getenv("DB_PASSWORD"),
+    "host": settings.db_replica_host or settings.db_host or settings.db_primary_host,
+    "port": int(settings.db_replica_port or settings.db_port),
+    "database": settings.db_name,
+    "user": settings.db_user,
+    "password": settings.db_password,
 }
 
 

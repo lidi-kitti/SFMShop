@@ -7,7 +7,7 @@
 Инструменты: **pytest**, **pytest-cov**, `unittest.mock`, `fastapi.testclient.TestClient`. Учебные циклы TDD/`unittest` живут в `src/scripts/lesson_66_`* … `lesson_69_*` и не смешиваются с папкой `tests/`. Запуск регрессии:
 
 ```bash
-pytest tests --cov=src
+pytest tests --cov=src --cov-fail-under=80
 ```
 
 Пирамида: много быстрых тестов моделей и утилит → сервисы со скидками и валидаторами → узкий слой HTTP с `@patch`.
@@ -68,7 +68,9 @@ HTTP и учебный in-memory роутер:
 
 Инструмент: **pytest-cov**, отчёт `pytest tests --cov=src`. Конфиг `.coveragerc`: `source = src`, omit учебные `src/scripts/`*, замороженный `src/main.py`, тяжёлый `src/api/main.py` (его контракт проверяет TestClient, не line-coverage), демо с `asyncio.run` при импорте, AI/Mongo/очередь.
 
-Замеренный прогон: **51 passed**, **TOTAL 95%** (522 statements, 28 miss). По компонентам, которые реально крутят `tests/`:
+Замеренный прогон: **51 passed**, **TOTAL 95%**. Порог урока и CI — **выше 80%** (`--cov-fail-under=80`). 100% по всему репозиторию не цель: `__main__`-демо и живой брокер в coverage не входят (см. `.coveragerc`).
+
+Выкладка и Docker/K8s/CI: [deployment.md](deployment.md), [infrastructure_plan.md](infrastructure_plan.md).
 
 
 | Компонент                                 | Cover                     |
@@ -100,7 +102,7 @@ tests/
 - **Фикстуры** в `test_models.py` (`sample_product`) и `test_services.py` (`valid_product`); общие пути — в `conftest.py`.
 - **Параметризация** в `test_utils.py`: один тест — несколько входов, без копипасты.
 - Моки вешаются декоратором `@patch` на функцию теста; клиент API — один `client = TestClient(app)` на модуль.
-- Скрипты `src/scripts/lesson_*.py` — отдельный контур `unittest` + печать сводки, не пакет `tests/`.
+- Скрипты `src/scripts/lesson_*.py` — отдельный контур `unittest` + печать сводки, не пакет `tests/`. Пример CI-сводки: `lesson_75_order_total_ci.py`.
 
 
 

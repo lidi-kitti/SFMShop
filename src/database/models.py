@@ -57,35 +57,29 @@ class OrderItem(Base):
     product: Mapped["Product"] = relationship()
 
 # Настройка подключения: запись — primary, чтение — replica
-import os
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from urllib.parse import quote_plus
 
-load_dotenv()
+from src.core.config import settings
 
 
 def _database_url(host, port):
-    user = quote_plus(os.getenv("DB_USER", "postgres"))
-    password = quote_plus(os.getenv("DB_PASSWORD", "user") or "")
-    db_name = os.getenv("DB_NAME", "sfmshop")
-    return f"postgresql://{user}:{password}@{host}:{port}/{db_name}"
+    user = quote_plus(settings.db_user)
+    password = quote_plus(settings.db_password or "")
+    return f"postgresql://{user}:{password}@{host}:{port}/{settings.db_name}"
 
 
 primary_engine = create_engine(
     _database_url(
-        os.getenv("DB_HOST") or os.getenv("DB_PRIMARY_HOST", "localhost"),
-        os.getenv("DB_PORT", "5432"),
+        settings.db_host or settings.db_primary_host,
+        settings.db_port,
     )
 )
 replica_engine = create_engine(
     _database_url(
-        os.getenv("DB_REPLICA_HOST")
-        or os.getenv("DB_HOST")
-        or os.getenv("DB_PRIMARY_HOST", "localhost"),
-        os.getenv("DB_REPLICA_PORT") or os.getenv("DB_PORT", "5432"),
+        settings.db_replica_host or settings.db_host or settings.db_primary_host,
+        settings.db_replica_port or settings.db_port,
     )
 )
 

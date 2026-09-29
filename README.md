@@ -45,11 +45,7 @@ python -c "import fastapi, psycopg2, redis, pika, pymongo, sqlalchemy"
 
 ## Обновление requirements.txt
 
-После установки или добавления пакета зафиксировать версии:
-
-```bash
-pip freeze > requirements.txt
-```
+Новый пакет, который **сам** импортирует проект, дописывайте в `requirements.txt` вручную с версией. Команду `pip freeze > requirements.txt` **не запускайте**: в файл попадут транзитивные зависимости и список раздуется.
 
 ## Стек
 
@@ -113,7 +109,7 @@ uvicorn src.api.main:app --reload --port 8000
 ### 4. Тесты
 
 ```bash
-pytest tests --cov=src
+pytest tests --cov=src --cov-fail-under=80
 ```
 
 Подход к тестам: [docs/testing_approach.md](docs/testing_approach.md).
@@ -124,6 +120,14 @@ pytest tests --cov=src
 python src/main.py
 python src/models/notifications.py
 ```
+
+### 6. Docker
+
+```bash
+docker compose -f docker/docker-compose.yml up --build
+```
+
+Развёртывание и инфраструктура: [docs/deployment.md](docs/deployment.md), [docs/infrastructure_plan.md](docs/infrastructure_plan.md).
 
 ## API (кратко)
 
@@ -145,6 +149,10 @@ python src/models/notifications.py
 | Файл | О чём |
 |------|--------|
 | [docs/testing_approach.md](docs/testing_approach.md) | Подход к тестированию |
+| [docs/deployment.md](docs/deployment.md) | Как выложить проект |
+| [docs/infrastructure_plan.md](docs/infrastructure_plan.md) | Docker, Kubernetes, CI/CD |
+| [docs/hosting_comparison.md](docs/hosting_comparison.md) | VPS, облако, PaaS |
+| [docs/hosting_strategy.md](docs/hosting_strategy.md) | Нагрузка и выбор хостинга |
 | [docs/api_specification.txt](docs/api_specification.txt) | REST API |
 | [docs/git_workflow_summary.md](docs/git_workflow_summary.md) | Git-воркфлоу |
 | [docs/scalable_architecture.md](docs/scalable_architecture.md) | Масштабирование |
