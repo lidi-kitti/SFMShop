@@ -114,6 +114,7 @@ from src.services.cache_service import CacheService
 from src.services.async_service import process_orders_async
 from src.services.external_api_service import ExchangeClient
 from src.services.queue_producer import QueueProducer, send_message
+from src.services.log_service import log_service
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -509,15 +510,20 @@ async def login(body: LoginRequest, db=Depends(get_db)):
 @limiter.limit(os.getenv("RATE_LIMIT_PRODUCTS", "30/minute"))
 async def get_products(request: Request, db=Depends(get_read_db)):
     """Получить список товаров."""
+    log_service.info("GET /products: запрос списка товаров")
     try:
         cached = cache_service_mod.get_cached_products()
         if cached is not None:
+            log_service.debug("GET /products: ответ из кэша", count=len(cached))
+            log_service.info("GET /products: успешно", count=len(cached))
             return api_response(cached, cache_control=CACHE_PUBLIC)
         products_data = _load_products_list(db)
+        log_service.info("GET /products: успешно", count=len(products_data))
         return api_response(products_data, cache_control=CACHE_PUBLIC)
     except HTTPException:
         raise
-    except Exception:
+    except Exception as exc:
+        log_service.error("GET /products: ошибка получения списка", error=str(exc))
         raise HTTPException(status_code=500, detail="Не удалось получить список товаров")
 
 
@@ -726,6 +732,12 @@ async def create_order(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
 ):
     """Создать заказ: заказ + позиции + списание остатка в одной транзакции."""
+    log_service.info(
+        "POST /orders: запрос создания заказа",
+        user_id=order.user_id,
+        product_id=order.product_id,
+        quantity=order.quantity,
+    )
     try:
         if order.product_id and order.quantity and not order.items:
             order_id = queries.create_order(
@@ -733,6 +745,11 @@ async def create_order(
                 product_id=order.product_id,
                 quantity=order.quantity,
                 total=None,
+            )
+            log_service.info(
+                "POST /orders: заказ создан",
+                order_id=order_id,
+                user_id=order.user_id,
             )
             return api_response(
                 {
@@ -807,15 +824,33 @@ async def create_order(
                 "RabbitMQ недоступен, заказ %s всё равно создан",
                 new_order.id,
             )
+            log_service.warning(
+                "POST /orders: RabbitMQ недоступен, заказ всё равно создан",
+                order_id=new_order.id,
+            )
 
+        log_service.info(
+            "POST /orders: заказ создан",
+            order_id=new_order.id,
+            user_id=user.id,
+        )
         return api_response(
             _order_to_dict(new_order, include_items=True),
             status_code=201,
             cache_control=CACHE_NO_STORE,
         )
-    except HTTPException:
+    except HTTPException as exc:
+        log_service.warning(
+            "POST /orders: отказ",
+            status_code=exc.status_code,
+            detail=exc.detail,
+        )
         raise
-    except Exception:
+    except Exception as exc:
+        log_service.critical(
+            "POST /orders: критическая ошибка создания заказа",
+            error=str(exc),
+        )
         raise HTTPException(status_code=500, detail="Не удалось создать заказ")
 
 
